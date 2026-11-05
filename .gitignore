@@ -1,0 +1,30 @@
+# ── age / sops 私钥（绝对不能进仓库）────────────────────
+*.age
+keys.txt
+age/
+*.agekey
+!secrets/.sops.yaml
+
+# ── 明文凭据源文件（只提交 .sops.yaml 密文版）────────────
+secrets/credentials.yaml
+secrets/*.yaml
+!secrets/credentials.sops.yaml
+!secrets/.sops.yaml
+
+# ── 本地解密缓存 / 临时产物 ───────────────────────────
+*.decrypted.*
+*.dec
+*.tmp
+*.bak
+.cache/
+.tmp/
+
+# ── Obsidian 工作区状态（可同步，但常带个人痕迹）────────
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# ── 系统垃圾 ─────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store

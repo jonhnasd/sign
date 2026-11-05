@@ -1,0 +1,2 @@
+# SOPS 加密文件标记 —— 让 git 知道这些文件是密文（diff 时不误判为二进制）
+secrets/*.sops.yaml filter=sops diff=sops
