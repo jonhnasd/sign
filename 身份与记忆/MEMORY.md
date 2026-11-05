@@ -27,6 +27,12 @@ status: active
 | **Claude Code** | ① 库内本文件 | 直接改 ① |
 | **Codex** | ① 库内本文件 | 直接改 ① |
 
+**② 注入副本里有什么**（同步脚本会一起带过去）：
+`MEMORY.md`（含明文凭据）· `SOUL/IDENTITY/USER/BOOTSTRAP` · `长期记忆.md`（完整索引+按需求查）·
+**`脚本索引.md`（706 脚本分类表）** · **`上品资料索引.md`（spec 模板+上品决策记录）**
+
+> ⚠️ 索引文件**必须**一起同步 —— 否则这里只有「去查索引」的指针，没有内容。
+
 **同步命令**（改完 ① 后跑）：
 ```bash
 bash C:/Users/Administrator/.workbuddy/tools/crypto/sync-memory.sh          # 有冲突会中止
