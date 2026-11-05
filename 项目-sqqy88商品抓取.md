@@ -9,6 +9,40 @@ status: active
 
 # 项目：sqqy88 商品抓取（列表 / 详情 / 增量监控）
 
+## 🚀 快速开始
+
+> [!note] 一句话
+> 已完全脱机 —— 直接跑脚本抓商品/详情/增量，不需要手机在线。
+
+### 前置条件
+- `.sqqy88_jwt.txt` 未过期（uni 端详情需登录态，约 7 天）
+- 脚本在 `C:/Users/Administrator/Desktop/workbuddy/文档提取/`
+
+### 一键入口
+
+```bash
+cd "C:/Users/Administrator/Desktop/workbuddy/文档提取"
+
+# 抓商品列表 / 详情 / 增量
+python sqqy88_cli.py search <关键词>
+python sqqy88_cli.py detail <商品ID>
+python sqqy88_cli.py incremental
+```
+
+### 预期输出
+```
+✓ 抓到 N 条商品（已写入 data/sqqy88_*.json）
+✗ 「请登录后操作」→ JWT 过期 → 需手机在线重取
+```
+
+### 完整步骤
+1. 检查 JWT 是否过期
+2. 跑脚本抓取
+3. 结果落 JSON，直接喂给 `上sku_siquan.py` 拉介绍/图集
+
+> ⚠️ 双签名算法（MD5 / SHA1）已在脚本内实现，**别再手工重算**。
+
+
 > 2026-11-04 完成。**最终状态：完全脱离手机**，电脑独立抓取。
 > 配套能力链见 [[项目-手机调试能力链]]（本篇的定位手段来自那条链）。
 >

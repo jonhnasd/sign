@@ -10,6 +10,69 @@ status: active
 > 让 Agent 实时读取/控制**正在使用的**浏览器，不需要调试端口，不需要重启浏览器。
 > 2026-09-24 自建并跑通。
 
+## 🚀 快速开始
+
+> [!note] 一句话
+> 装好扩展 + 桥接服务在跑 → 我就能直接读页面、点按钮、调接口、调你的浏览器。
+
+### 前置条件
+
+```bash
+# ① 桥接服务在跑（默认开机自启，也可用 MCP 自动拉起）
+curl -s --noproxy '*' http://127.0.0.1:8787/health
+# 期望：{"ok":true,"role":"master","port":8787,"extConnected":true}
+#                              ↑ extConnected 必须 true
+
+# ② Edge 已打开（普通 Edge，不是 webview2）
+# ③ edge://extensions 里「Edge Bridge」已启用
+```
+
+**首次装扩展**：`edge://extensions` → 开启开发者模式 → 「加载已解压的扩展程序」→ 选
+`C:\Users\Administrator\WorkBuddy\2026-09-22-11-37-41\edge-bridge\extension`
+
+### 一键入口
+
+```bash
+# ① 沙箱环境启动 Edge（关键：直接后台启动会被回收）
+D="C:/Users/Administrator/.workbuddy/tools/edge"; mkdir -p "$D"
+cat > "$D/open.cmd" <<'EOF'
+@echo off
+start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" https://www.baidu.com
+EOF
+explorer.exe "C:\Users\Administrator\.workbuddy\tools\edge\open.cmd"
+# ↑ 用 explorer 调用，让 Edge 脱离沙箱进程树，才能跨命令存活
+
+# ② 发指令（POST /rpc）
+RPC() { curl -s --noproxy '*' -X POST "http://127.0.0.1:8787/rpc" \
+  -H "Content-Type: application/json" -d "$1"; }
+
+RPC '{"cmd":"tabs_list","params":{}}'                    # 列出标签页
+RPC '{"cmd":"eval","params":{"tabId":123,"expression":"document.title"}}'
+RPC '{"cmd":"read_page","params":{"tabId":123}}'
+RPC '{"cmd":"click","params":{"tabId":123,"selector":"#btn"}}'
+RPC '{"cmd":"screenshot","params":{"tabId":123}}'
+RPC '{"cmd":"cdp","params":{"tabId":123,"method":"Network.enable"}}'   # 万能后门
+```
+
+### 预期输出
+
+```
+tabs_list → { ok:true, data:[{id:xxx, title:"...", url:"..."}] }
+eval      → { ok:true, data:{result:"..."}}
+✗ 「浏览器扩展未连接」→ /health 的 extConnected 为 false（Edge 没开/扩展被关）
+✗ 「未知指令: tabs」   → 指令名要**下划线小写**（tabs_list 不是 tabs）
+```
+
+### 完整步骤
+
+1. Edge 开着 + 扩展启用（`/health` → `extConnected:true`）
+2. `tabs_list` 找到目标页 → 拿 tabId
+3. `eval` / `read_page` 读页面 → 分析 → `click`/`type` 操作
+4. 必要时 `cdp` 直接发 CDP 命令（万能后门，能做 eval 做不到的事）
+
+> ⚠️ **不要主动 `tab_new` 开页、不爬 DOM、不重启桥接** —— 用户开着页 = 登录态在 = 接口零等待。
+> ⚠️ **eval 不带 awaitPromise** → 异步请求返回 `null`，必须走 `cdp` + `Runtime.evaluate{awaitPromise:true,returnByValue:true}`。
+
 ## 放在哪
 
 ```

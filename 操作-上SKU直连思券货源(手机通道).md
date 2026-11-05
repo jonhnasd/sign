@@ -9,6 +9,48 @@ status: active
 
 # 操作 · 上SKU 直连思券货源（手机通道）
 
+## 🚀 快速开始
+
+> [!note] 一句话
+> 插上手机，用手机出口 IP 直连思券拉商品名/介绍/图集（电脑直连被风控拦）。
+
+### 前置条件
+```bash
+# ① 手机 adb 在线
+"C:/Users/Administrator/.workbuddy/tools/adb/platform-tools/adb.exe" devices
+# 期望：ffd82337  device
+
+# ② 手机连着放行出口的 WiFi
+# ③ JWT 未过期（uni 端详情需登录态，约 7 天）
+```
+
+### 一键入口
+
+```bash
+cd "C:/Users/Administrator/Desktop/workbuddy/文档提取"
+
+# 入口：<关键词|ID> → 打印名称/介绍/图集/周期，并存 siquan_<id>.json
+python 上sku_siquan.py <关键词或商品ID>
+```
+
+### 预期输出
+```
+名称: xxx会员月卡
+介绍: ……
+图集: 3 张
+周期: 30天
+✓ 已保存 siquan_<id>.json
+✗ 「请登录后操作」→ JWT 过期 → 手机在线重取
+```
+
+### 完整步骤
+1. 手机连 WiFi + adb 在线
+2. `python 上sku_siquan.py <关键词>`
+3. 结果喂给 `deploy.py` 的文案⑪ 与详情图⑬
+
+> ⚠️ **电脑直连返回 0 字节** —— 思券按**出口 IP** 风控，**必须走手机通道**。
+
+
 > 2026-11-05 建立。配合 [[操作-阿奇索上品一条龙]]（上 SKU 流程）与 [[项目-sqqy88商品抓取]]（思券协议）。
 >
 > **定位**：阿奇索里思券**已是发货货源**（spType=6）。手机上的思券只用来**拉商品名 / 介绍 / 图集**，填进闲鱼文案⑪ 与详情图⑬。

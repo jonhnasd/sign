@@ -10,6 +10,64 @@ status: active
 > 阿奇索·闲鱼自动发货后台（`aldsidle.agiso.com`）给宝贝加规格、改价格的完整路径。
 > 2026-09-24 实测于宝贝「抖音直播抖币充值」，用 [[项目-edge-bridge]] 的浏览器桥接自动完成。
 
+## 🚀 快速开始
+
+> [!note] 一句话
+> 用 edge-bridge 连上你**正在用的** Edge，通过页面内部接口直接读写 SKU 配置 —— **不用手点**。
+
+### 前置条件
+
+```bash
+# ① 桥接服务在跑
+curl -s --noproxy '*' http://127.0.0.1:8787/health
+# 期望：{"ok":true,"role":"master",...,"extConnected":true}
+#                              ↑ 必须为 true，否则扩展没连上
+
+# ② Edge 已开 + Edge Bridge 扩展已启用（edge://extensions 看一眼）
+# ③ 已登录 agiso（aldsidle.agiso.com），且是**供货商账号**视角
+```
+
+### 一键入口
+
+脚本都在 `C:\Users\Administrator\WorkBuddy\2026-09-22-11-37-41\edge-bridge\tools\`：
+
+```bash
+cd "C:/Users/Administrator/WorkBuddy/2026-09-22-11-37-41/edge-bridge/tools"
+
+# 读源商品 SKU（拿源档位/成本）
+python read_goofish_item.py 1012104092517
+
+# 读目标现状 + 自动备份
+python probe_target.py 1679427147 1084793623900
+
+# 改平台价格类型（幂等，可反复跑）
+python fix_platform_price_type.py <tabId> [--dry]
+
+# 配某账号的供货商设置
+python set_huya_account_1086681905342.py --dry     # 预览（自动备份）
+python verify_1086681905342.py                     # 回读校验
+```
+
+### 预期输出
+
+```
+✓ 成功 → 打印变更摘要 + 「已保存」；verify 脚本回读结果与目标一致
+✗ 失败 → 「扩展未连接」        → 查 /health 的 extConnected
+       → 「401 unauthorized」   → 页面登录态失效，重新登录 agiso
+       → 「回读仍看到旧值」     → 服务端缓存，改用 GetAldsSkuList 交叉验证
+```
+
+### 完整步骤
+
+1. 打开 Edge，登录 agiso，打开**目标宝贝的编辑页**
+2. `curl /health` 确认 `extConnected:true`，拿到当前 tabId
+3. `read_goofish_item.py` 读源商品 SKU 档位
+4. `probe_target.py` 读目标现状（**会自动备份**）
+5. 改配置 → `fix_platform_price_type.py` / `set_huya_account_*.py`
+6. `verify_*.py` 回读校验
+
+> ⚠️ **黄金规则**：`Edit` 是**整份提交**，不是增量。必须先读全量、只改目标字段、整体回写 —— **自己拼新 body 会丢字段**。
+
 ## 一、概念：SKU 规格分两层
 
 ```

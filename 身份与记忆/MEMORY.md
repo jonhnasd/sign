@@ -74,6 +74,7 @@ C:\Users\Administrator\Desktop\obisidian\obisidian\
 | 货源平台密钥 / APPID | `secrets/credentials.sops.yaml`（**加密**，用 `sync-memory.sh` 取明文） |
 | 想知道这库怎么组织的 | `README.md` |
 | 最近变更 / 哪篇刚改过 | `最近变更.md`（自动生成，git log 驱动） |
+| **写笔记的格式规范 / 怎么写操作层** | `操作层规范.md`（**新笔记必须带「🚀 快速开始」块**，体检会查） |
 
 ### 🔑 age 私钥备份在哪（用户决定）
 

@@ -8,6 +8,47 @@ status: legacy
 
 # 🕸 项目：88.qcqcq.com 货源站抓取
 
+## 🚀 快速开始
+
+> [!note] 一句话
+> 货源站接口逆向 + 持续抓取，用于拿成本价和货源商品。
+
+### 前置条件
+- 登录态有效（`login_guard.py` 会检查）
+- 脚本目录 `C:/Users/Administrator/Desktop/workbuddy/文档提取/`
+
+### 一键入口
+
+```bash
+cd "C:/Users/Administrator/Desktop/workbuddy/文档提取"
+
+# 登录态守卫（先跑，失效会提示）
+python login_guard.py
+
+# 持续抓取（间隔秒 / 最大轮数）
+python fetch_qcq.py 300 20
+
+# 按加价率生成 SKU 建议
+python make_sku.py --markup 10 --threshold 10 --below fixed:0.5 --out data/skus
+```
+
+### 预期输出
+```
+✓ 登录态有效
+抓到 N 条货源，成本价区间 xxx~yyy
+✓ 已生成 data/skus/*.json
+✗ 登录失效 → 重新扫码登录
+```
+
+### 完整步骤
+1. `login_guard.py` 确认登录态
+2. `fetch_qcq.py` 持续抓
+3. `make_sku.py` 出 SKU 建议
+
+> ⚠️ **status: legacy** —— 方法论（Vue SPA 抓取、参数构造）仍有效，
+> 但**货源平台已不在现行选源范围**（现行只比志远 + 商战，见 [[身份与记忆/MEMORY]]）。
+
+
 > [!warning] 状态：历史留档（legacy）
 > **本文讲的是接口逆向方法论，仍然有效**（SPA 抓取、参数构造、签名分析）。
 > 但文中涉及的**货源平台（星芒 / 省省 / 追梦）已不在现行选源范围** ——
