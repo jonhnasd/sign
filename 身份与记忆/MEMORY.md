@@ -75,6 +75,16 @@ C:\Users\Administrator\Desktop\obisidian\obisidian\
 | 库架构 / 目录结构 / 加密怎么用 | `README.md` |
 | 最近变更 / 哪篇刚改过 | `最近变更.md`（自动生成，git log 驱动） |
 
+### 🔑 age 私钥备份在哪（用户决定）
+
+**用户 2026-11-05 决定：age 私钥备份放自己的云盘，不用密码管理器。**
+
+- 本机：`C:\Users\Administrator\.workbuddy\tools\crypto\age\keys.txt`（主力）
+- 桌面备份：`C:\Users\Administrator\Desktop\age-keys-BACKUP-勿外传.txt`
+- **云盘备份**：用户自存（私钥全文 = `AGE-SECRET-KEY-` 开头那一整行）
+- ⚠️ 私钥丢失 = 仓库里的密文**永久无法解密** → 云盘那份必须真的存
+- 恢复流程见 `README.md`「换设备恢复流程」一节
+
 **通用调用话术**：用户说「继续 / 接着上次 / 之前那个 / 类似任务」→ 先读 `长期记忆.md` 索引定位项目 → 读对应分册 → 再动手。
 
 **写完 Obsidian 笔记后必跑完整性检查**（防止「写了但没挂索引」＝新对话发现不了）：

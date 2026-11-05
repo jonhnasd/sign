@@ -116,12 +116,65 @@ SOPS_AGE_KEY_FILE="C:/Users/Administrator/.workbuddy/tools/crypto/age/keys.txt" 
 ### ⚠️ 铁律
 
 - **age 私钥绝不进仓库**（`.gitignore` 已兜底，但也要自己注意）
-- 私钥丢了 = 密文永久无法解密 → **务必另存一份到密码管理器**
+- 私钥丢了 = 密文永久无法解密 → **务必另存一份到云盘/密码管理器**
 - 凭据只用于本地调用，**不外传**
+
+### 🔑 换设备恢复流程（照着做，一步别漏）
+
+**需要准备两样东西**：① 这个仓库 ② age 私钥备份
+
+```bash
+# ── 1. clone 仓库 ──
+git clone git@github.com:jonhnasd/obsidian-vault.git
+cd obsidian-vault
+
+# ── 2. 装工具（age + sops）──
+#    到 https://github.com/FiloSottile/age/releases 和
+#       https://github.com/getsops/sops/releases 下载对应平台二进制
+#    放到 C:\Users\<你>\.workbuddy\tools\crypto\
+
+# ── 3. 恢复 age 私钥 ──
+#    把云盘里的备份存成：
+#    C:\Users\<你>\.workbuddy\tools\crypto\age\keys.txt
+#    （内容格式：
+#      # created: ...
+#      # public key: age1xxx...
+#      AGE-SECRET-KEY-1XXXX...   ← 一整行，从 AGE-SECRET-KEY- 到结尾
+#    ）
+
+# ── 4. 验证能解密 ──
+SOPS_AGE_KEY_FILE="C:/Users/<你>/.workbuddy/tools/crypto/age/keys.txt" \
+  "C:/Users/<你>/.workbuddy/tools/crypto/sops.exe" --decrypt \
+  "secrets/credentials.sops.yaml"
+# 能看到明文 appid/secret = 恢复成功
+
+# ── 5. 装同步脚本 + 建 user 目录 ──
+bash C:/Users/<你>/.workbuddy/tools/crypto/sync-memory.sh
+```
+
+**验证成功标志**：第 4 步能输出明文密钥、第 5 步报告「同步完成」。
+
+> ⚠️ **公钥丢了也能找回** —— `credentials.sops.yaml` 里的 `sops.age[].recipient` 就是公钥。
+> 但**公钥不能解密**，所以私钥备份是唯一途径。
 
 ---
 
-## 五、写完必跑检查
+## 五、Git 推送安全（两道闸）
+
+| 闸 | 位置 | 作用 |
+|---|---|---|
+| **post-commit** | `.git/hooks/post-commit` | 库内 `身份与记忆/` 改动后**自动同步**到 user 目录 |
+| **pre-push** | `.git/hooks/pre-push` | 推送前审计：age 私钥 / 明文凭据 / 真密钥 / JWT —— 命中即**中止推送** |
+
+手动审计（不依赖 hook）：
+```bash
+bash C:/Users/Administrator/.workbuddy/tools/crypto/publish.sh <仓库名> --check
+```
+
+**首次推送前务必做一次换设备演练**（见上节第 4 步）—— 能提前发现 90% 的坑。
+
+---
+
 
 ```bash
 "C:/Users/Administrator/.workbuddy/binaries/python/envs/default/Scripts/python.exe" \
@@ -140,6 +193,8 @@ bash C:/Users/Administrator/.workbuddy/tools/crypto/gen-changelog.sh [天数]   
 
 ### 统一 frontmatter
 
+## 六、写完必跑检查
+
 ```bash
 "C:/Users/Administrator/.workbuddy/binaries/python/envs/default/Scripts/python.exe" \
   "C:/Users/Administrator/.workbuddy/tools/adb/fix_frontmatter.py"
@@ -150,7 +205,7 @@ bash C:/Users/Administrator/.workbuddy/tools/crypto/gen-changelog.sh [天数]   
 
 ---
 
-## 六、Git 同步（待执行）
+## 七、Git 同步
 
 ```bash
 cd "C:/Users/Administrator/Desktop/obisidian/obisidian"
@@ -165,7 +220,7 @@ git push -u origin main
 
 ---
 
-## 七、相关
+## 八、相关
 
 - [[长期记忆]] —— 索引
 - [[记忆-回写规范]] —— 读写规则
