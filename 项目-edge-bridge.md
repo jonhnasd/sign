@@ -13,14 +13,18 @@ status: active
 ## 放在哪
 
 ```
-C:\Users\Administrator\WorkBuddy\2026-09-22-11-37-41\edge-bridge\
+C:\Users\Administrator\WorkBuddy\2026-09-22-11-37-41\edge-bridge\   ← ✅ 用这个
 ├─ extension\          浏览器扩展（edge://extensions 加载此文件夹）
 ├─ server.mjs          桥接服务（WebSocket 服务端 + MCP stdio，零依赖）
 ├─ start.cmd / stop.cmd
 └─ tools\              各类操作脚本（阿奇索 SKU 自动化等）
 ```
 
-MCP 注册在 `~/.workbuddy/.mcp.json` 的 `edge-bridge` 项。
+MCP 注册在 `~/.workbuddy/.mcp.json` 的 `edge-bridge` 项 → 指向上面这个目录。
+
+> ⚠️ **另有一份旧副本**：`C:\Users\Administrator\Desktop\workbuddy\杂\edge-bridge`
+> （server.mjs 19900 字节 / 09-24）。**注册在用的是上面那个新版本**（21160 字节 / 10-10）。
+> 两份同名目录容易搞混 —— 认准 `WorkBuddy\2026-09-22-11-37-41` 这个路径。
 
 ## 结构
 
@@ -39,6 +43,49 @@ MCP 注册在 `~/.workbuddy/.mcp.json` 的 `edge-bridge` 项。
 `screenshot` / `net_install` / `net_get` / `cdp` / `cookies` / `detach`
 
 其中 `browser_eval` 最通用，`browser_cdp` 是万能后门。
+
+## 🔧 实际调用方式（2026-11-05 实测校正）
+
+**指令走 `POST /rpc`**（不是 REST！body 是 `{cmd, params, timeout}`）：
+
+```bash
+curl -s --noproxy '*' -X POST "http://127.0.0.1:8787/rpc" \
+  -H "Content-Type: application/json" \
+  -d '{"cmd":"tabs_list","params":{}}'
+```
+
+**⚠️ 指令名是下划线小写**（`tabs_list` / `tab_get` / `read_page`），
+不是驼峰也不是 `tabs`。完整表在 `extension/background.js` 的 `HANDLERS` 对象里：
+
+```
+ping  status  tabs_list  tab_get  tab_activate  tab_new  tab_close
+navigate  eval  read_page  click  type  screenshot
+net_install  net_get  cdp  cookies  attach  detach
+```
+
+**只有 `/health` 是 GET**，其它路径（`/tabs` 等）会返回纯文本 `edge-bridge`。
+
+### 启动 Edge（沙箱环境的坑）
+
+**⚠️ 直接后台启动会被回收** —— shell 退出时 Edge 一起被杀（实测进程数归零）。
+
+**解法：用 `explorer.exe` 调用 `.cmd` 启动器**，让 Edge 脱离沙箱进程树：
+
+```bash
+# 启动器：C:\Users\Administrator\.workbuddy\tools\edge\open-baidu.cmd
+explorer.exe "C:\Users\Administrator\.workbuddy\tools\edge\open-baidu.cmd"
+```
+
+实测：这样启动后 Edge **跨命令存活**，扩展自动重连（`extConnected: true`）。
+
+### 扩展连不上的两种情况
+
+| `/health` 返回 | 原因 | 处理 |
+|---|---|---|
+| `extConnected: false` | Edge 没开 / 扩展被禁用 | 开 Edge + `edge://extensions` 确认启用 |
+| `extConnected: true` 但 RPC 报「扩展未连接」 | 连接刚建立还没稳 | 等 3~5 秒重试（SW 心跳 20s） |
+
+---
 
 ## 关键设计（踩过的坑）
 
