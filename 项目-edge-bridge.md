@@ -72,7 +72,8 @@ eval      → { ok:true, data:{result:"..."}}
 4. 必要时 `cdp` 直接发 CDP 命令（万能后门，能做 eval 做不到的事）
 
 > ⚠️ **不要主动 `tab_new` 开页、不爬 DOM、不重启桥接** —— 用户开着页 = 登录态在 = 接口零等待。
-> ⚠️ **eval 不带 awaitPromise** → 异步请求返回 `null`，必须走 `cdp` + `Runtime.evaluate{awaitPromise:true,returnByValue:true}`。
+> ⚠️ **eval 封装已坏（2026-11-05 实测）**：任何调用（含同步 `document.title`）都报 `CDP BINDINGS 参数` 错，无法返回结果，不要再用。
+>    读页面 / 取标题 / 查元素 **一律走 `cdp` 后门** + `Runtime.evaluate{returnByValue:true}`（异步再加 `awaitPromise:true`）。
 
 ## 放在哪
 
@@ -128,6 +129,11 @@ net_install  net_get  cdp  cookies  attach  detach
 ```
 
 **只有 `/health` 是 GET**，其它路径（`/tabs` 等）会返回纯文本 `edge-bridge`。
+
+> ⚠️ **实测补充（2026-11-05）**：本机当前桥接版本的 `eval` 指令已彻底失效（curl / Python 直发均报 `BINDINGS 参数` 错），**改走 `cdp` 后门**发原生 `Runtime.evaluate` 读页面：
+> ```bash
+> RPC '{"cmd":"cdp","params":{"tabId":1679439290,"method":"Runtime.evaluate","params":{"expression":"document.title","returnByValue":true,"awaitPromise":false}}}'
+> ```
 
 ### 启动 Edge（沙箱环境的坑）
 
