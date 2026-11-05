@@ -35,12 +35,13 @@ curl -s --noproxy '*' http://127.0.0.1:8787/health
 ```bash
 # ① 沙箱环境启动 Edge（关键：直接后台启动会被回收）
 D="C:/Users/Administrator/.workbuddy/tools/edge"; mkdir -p "$D"
-cat > "$D/open.cmd" <<'EOF'
+cat > "$D/open-baidu.cmd" <<'EOF'
 @echo off
 start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" https://www.baidu.com
 EOF
 explorer.exe "C:\Users\Administrator\.workbuddy\tools\edge\open.cmd"
 # ↑ 用 explorer 调用，让 Edge 脱离沙箱进程树，才能跨命令存活
+# 注：open.cmd 是旧名，实际文件是 open-baidu.cmd
 
 # ② 发指令（POST /rpc）
 RPC() { curl -s --noproxy '*' -X POST "http://127.0.0.1:8787/rpc" \

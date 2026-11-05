@@ -23,24 +23,36 @@ status: active
 ```bash
 cd "C:/Users/Administrator/Desktop/workbuddy/文档提取"
 
-# 抓商品列表 / 详情 / 增量
-python sqqy88_cli.py search <关键词>
-python sqqy88_cli.py detail <商品ID>
-python sqqy88_cli.py incremental
+# 抓商品列表（脱机版：H5 端接口，cid 传 "" 才是全量）
+python sqqy88_fetch.py
+
+# 抓商品详情（uni 端，需 JWT）
+python sqqy88_detail.py
+
+# 探接口/签名是否正常
+python sqqy88_probe.py
 ```
+
+> ⚠️ **出口 IP 绑定**：脚本里 `IFACE` 指向 **WiFi「ZTE_43AF48」网卡的 IPv4**，
+> 强制流量从该出口走。走有线（郑州管城出口）会被站点风控拦，**连首页都返回 0 字节**。
+> 换网络时要改 `sqqy88_fetch.py` 里的 `IFACE`。
 
 ### 预期输出
 ```
-✓ 抓到 N 条商品（已写入 data/sqqy88_*.json）
-✗ 「请登录后操作」→ JWT 过期 → 需手机在线重取
+✓ 抓到 N 条商品 → sqqy88商品原始数据-YYYYmmdd-HHMM.json
+✓ 详情已导出   → sqqy88商品详情-YYYYmmdd-HHMM.xlsx
+✗ Content-Length: 0 → 出口 IP 被拦 → 检查 IFACE 是否指向正确网卡
+✗ 「请登录后操作」→ JWT 过期 → 需手机在线重取 .sqqy88_jwt.txt
 ```
 
 ### 完整步骤
-1. 检查 JWT 是否过期
-2. 跑脚本抓取
-3. 结果落 JSON，直接喂给 `上sku_siquan.py` 拉介绍/图集
+1. 检查电脑连的是 **ZTE_43AF48** WiFi
+2. `.sqqy88_jwt.txt` 未过期（约 7 天）
+3. `python sqqy88_fetch.py` 抓列表 → `python sqqy88_detail.py` 抓详情
+4. 结果喂给 `上sku_siquan.py` 拉介绍/图集
 
-> ⚠️ 双签名算法（MD5 / SHA1）已在脚本内实现，**别再手工重算**。
+> ⚠️ 双签名算法（H5 端 / uni 端）已在 `sqqy88_fetch.py` 内实现，**别再手工重算**。
+> ⚠️ **已知失效**：旧笔记里的 `sqqy88_cli.py` **不存在**，实际脚本是 `sqqy88_fetch.py` / `sqqy88_detail.py`。
 
 
 > 2026-11-04 完成。**最终状态：完全脱离手机**，电脑独立抓取。
