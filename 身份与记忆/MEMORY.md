@@ -7,6 +7,38 @@ status: active
 ---
 # MEMORY.md — 用户级长期记忆
 
+## 📍 本文件与 WorkBuddy 的关系（读之前先看）
+
+**本文件是用户级记忆的唯一权威源。** WorkBuddy 通过「自动注入」把它带进每个新对话。
+
+```
+① 权威源（在这里，改这里）
+   C:\Users\Administrator\Desktop\obisidian\obisidian\身份与记忆\MEMORY.md
+                        │
+                        │  sync-memory.sh  （单向：库 → 本地）
+                        ↓
+② 注入副本（WorkBuddy 自动读取，勿手改）
+   C:\Users\Administrator\.workbuddy\user-6e1ce042-0701-4318-8682-d9adc18279df-personal\MEMORY.md
+```
+
+| 谁在用 | 读哪里 | 怎么改 |
+|---|---|---|
+| **WorkBuddy** | ② 注入副本 | **改 ①**，然后跑同步脚本 |
+| **Claude Code** | ① 库内本文件 | 直接改 ① |
+| **Codex** | ① 库内本文件 | 直接改 ① |
+
+**同步命令**（改完 ① 后跑）：
+```bash
+bash C:/Users/Administrator/.workbuddy/tools/crypto/sync-memory.sh          # 有冲突会中止
+bash C:/Users/Administrator/.workbuddy/tools/crypto/sync-memory.sh --force  # 放弃本地改动强制覆盖
+bash C:/Users/Administrator/.workbuddy/tools/crypto/sync-memory.sh --check  # 只看差异
+```
+
+⚠️ **不要直接改 ②** —— 下次同步会被 ① 覆盖（脚本有冲突检测会提前警告，但改了仍会丢）。
+⚠️ ② 里含**明文凭据**（① 里是加密后的指引），所以 ② 绝不能进 Git 仓库。
+
+---
+
 ## 🚨 硬规则：每次任务前先读 Obsidian 库
 
 **默认动作，不需要用户提醒。** 用户说「继续 / 接着上次 / 之前那个」时，**必须先读再动手**。
