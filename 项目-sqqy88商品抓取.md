@@ -304,6 +304,38 @@ opener = urllib.request.build_opener(
 改 `sqqy88_fetch.py` 里的 `IFACE`（或设环境变量 `SQQY_IFACE`），用 `ipconfig` 查当前 WiFi 的 IPv4。
 **前提是这个 WiFi 的出口 IP 不在被拦名单里** —— 若换到别的 WiFi，需要重新验证。
 
+### 临时切 WiFi 抓数据再切回有线（2026-11-05 新增）
+
+适合场景：日常用有线上网，但要抓 sqqy88 时临时切 WiFi。
+
+```bash
+# ① 连接 WiFi ZTE_43AF48（出口 IP 必须在 192.168.0.x 段）
+# Windows: 设置 → 网络和 Internet → WiFi → 连 ZTE_43AF48
+
+# ② 查 WiFi 分配的 IPv4
+ipconfig | findstr "IPv4"
+# 期望看到类似: IPv4 地址 . . . . . . . . . . . . : 192.168.0.102
+
+# ③ 设置环境变量（或直接改脚本 IFACE）
+$env:SQQY_IFACE="192.168.0.102"
+
+# ④ 跑抓取
+cd C:/Users/Administrator/Desktop/workbuddy/文档提取
+python sqqy88_detail.py          # 全量详情
+# 或
+python sqqy88_fetch.py           # 列表 + 分类 + 详情样例
+
+# ⑤ 抓完切回有线
+# Windows: 断开 WiFi
+# 脚本里 IFACE 自动失效（绑定不到 192.168.0.102 会报错），下次抓之前记得重新设
+```
+
+> ⚠️ **关键**：WiFi 必须是 ZTE_43AF48（或同出口网段）。其他 WiFi 的出口 IP 可能也在风控名单里，需要先验证：
+> ```bash
+> python sqqy88_probe.py
+> ```
+> 看到 "网卡 192.168.0.xxx" 的「分类接口/商品列表」都返回数据 ≠ 风控，才算可用。
+
 ---
 
 ## 六、增量监控（网站更新了什么）
