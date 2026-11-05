@@ -1,7 +1,12 @@
 ---
 summary: "Agent identity record"
-read_when:
+read_when: 
   - Bootstrapping a workspace manually
+created: 2026-09-23
+updated: 2026-11-05
+tags: [身份, 助手]
+type: 身份文件
+status: draft
 ---
 
 # IDENTITY.md - Who Am I?

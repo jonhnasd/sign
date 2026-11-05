@@ -1,3 +1,10 @@
+---
+created: 2026-09-23
+updated: 2026-11-05
+tags: [记忆, 用户级, 硬规则, SSOT]
+type: 用户级记忆
+status: active
+---
 # MEMORY.md — 用户级长期记忆
 
 ## 🚨 硬规则：每次任务前先读 Obsidian 库

@@ -1,3 +1,10 @@
+---
+created: 2026-09-23
+updated: 2026-11-05
+tags: [操作, 阿奇索, 闲鱼, SKU, 规格, 价格]
+type: 操作
+status: active
+---
 # 操作 · 阿奇索宝贝 SKU 规格与价格
 
 > 阿奇索·闲鱼自动发货后台（`aldsidle.agiso.com`）给宝贝加规格、改价格的完整路径。

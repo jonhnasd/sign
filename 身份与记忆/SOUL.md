@@ -1,8 +1,13 @@
 ---
 title: "SOUL.md Template"
 summary: "Workspace template for SOUL.md"
-read_when:
+read_when: 
   - Bootstrapping a workspace manually
+created: 2026-09-23
+updated: 2026-11-05
+tags: [身份, 人格]
+type: 身份文件
+status: active
 ---
 
 # SOUL.md - Who You Are

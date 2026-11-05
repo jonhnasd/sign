@@ -4,7 +4,7 @@ type: 操作
 created: 2026-11-05
 updated: 2026-11-05
 owner: 秋雨
-status: 可用
+status: active
 ---
 
 # 操作 · 上SKU 直连思券货源（手机通道）

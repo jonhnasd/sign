@@ -1,7 +1,12 @@
 ---
 summary: "User profile record"
-read_when:
+read_when: 
   - Bootstrapping a workspace manually
+created: 2026-09-23
+updated: 2026-11-05
+tags: [身份, 用户档案]
+type: 身份文件
+status: draft
 ---
 
 # USER.md - About Your Human

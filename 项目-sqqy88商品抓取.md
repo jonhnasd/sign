@@ -4,7 +4,7 @@ type: 项目
 created: 2026-11-04
 updated: 2026-11-04
 owner: 秋雨
-status: 可用（完全脱机）
+status: active
 ---
 
 # 项目：sqqy88 商品抓取（列表 / 详情 / 增量监控）

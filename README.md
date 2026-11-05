@@ -1,3 +1,10 @@
+---
+created: 2026-11-05
+updated: 2026-11-05
+tags: [索引, 架构说明]
+type: 索引
+status: active
+---
 # 📚 Obsidian 记忆库
 
 > **唯一权威源（SSOT）**。所有 AI 工具的长期记忆都从这里读。
@@ -45,6 +52,7 @@
 | **`secrets/`** | 货源平台凭据 | ✅ **sops + age** |
 | `.sops.yaml` | SOPS 配置（age 公钥，公钥非敏感） | — |
 | `.gitattributes` | 标记 SOPS 文件（diff 不误判二进制） | — |
+| `最近变更.md` | **自动生成**的变更历史视图（git log 驱动） | — |
 | `.gitignore` | 排除 age 私钥、明文源文件、本地缓存 | — |
 
 ---
@@ -120,8 +128,25 @@ SOPS_AGE_KEY_FILE="C:/Users/Administrator/.workbuddy/tools/crypto/age/keys.txt" 
   "C:/Users/Administrator/.workbuddy/tools/adb/check_vault.py"
 ```
 
-检查：索引覆盖 / 速查表覆盖 / 双链断链 / 敏感凭据 / daily log 超 30 天未蒸馏。
+检查 7 项：索引覆盖 / 速查表覆盖 / 双链断链 / 敏感凭据 / daily log 超 30 天未蒸馏 /
+**legacy 笔记是否加口径提示** / **frontmatter 完整性** / **库内口径交叉引用**。
 退出码 `0` = 全通过。
+
+### 重新生成「最近变更.md」
+
+```bash
+bash C:/Users/Administrator/.workbuddy/tools/crypto/gen-changelog.sh [天数]   # 默认 30
+```
+
+### 统一 frontmatter
+
+```bash
+"C:/Users/Administrator/.workbuddy/binaries/python/envs/default/Scripts/python.exe" \
+  "C:/Users/Administrator/.workbuddy/tools/adb/fix_frontmatter.py"
+```
+
+字段：`created / updated / tags / type / status`
+`status` 语义：**active** 现行可照做 · **legacy** 历史留档（别照做业务决策）· **draft** 草稿 · **ref** 索引规则类
 
 ---
 
