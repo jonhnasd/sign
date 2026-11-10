@@ -497,6 +497,75 @@ from_list / goods_type_text / uid_text_type / uid_text
 
 ---
 
+## 十二、开放 API：卡速售 2.0（2026-11-08 实测）
+
+> 与本篇前文的**前端抓取签名完全不同**，别混用：前端是两套 md5（H5/uni），开放 API 是 **sha1**。
+> 客户端：`C:\Users\Administrator\Desktop\workbuddy\文档提取\kasushou_api.py`
+> 完整说明：同目录 `卡速售API对接说明.md`。**凭据不入库**，走环境变量 `KSS_APPID` / `KSS_APIKEY`。
+
+**文档获取技巧**：Apifox 分享页是 JS 渲染，直接抓只有标题。用
+`https://s.apifox.cn/<projectId>/llms.txt` 拿全部 `.md` 链接，再逐个抓
+`doc-3002478.md`（签名说明）与 `api-<ID>.md`（完整 OpenAPI YAML）。本次共 17 份。
+
+**签名**（已用文档示例串离线复算验证一致）：
+```
+Timestamp = 秒级时间戳 + 3位随机数 = 13位数字
+data      = body 按键名升序后的紧凑 JSON（PHP ksort + json_encode，中文/斜杠不转义）
+Sign      = sha1(Timestamp + data + apikey)
+Header    : Sign / Timestamp / UserId(=用户APPID) / Content-Type: application/json; charset=utf-8
+```
+
+**接口**：`/api/v1/user/info`（余额）、`goods/cate`、`goods/list`、`goods/info`、
+`goods/pricelog`、`order/info` 为只读；`order/buy`、`order/close`、`order/complain`、
+用户加款扣款为**写接口，会产生真实订单/扣款，测试绝不调用**（客户端故意不映射）。
+
+**2026-11-08 18:56 已打通 ✅（18:35 的失败是 11-04 出口 IP 风控坑重现）**：
+
+| 线路 | 本机 IP | 公网出口 | 思券首页 | API |
+|---|---|---|---|---|
+| 有线（默认路由 metric 35） | `192.168.10.101` | `120.194.93.184`（郑州管城） | 200 / **0 字节** ❌ | 不通 |
+| WiFi `ZTE_43AF48`（metric 45） | `192.168.0.101` | `111.55.197.69`（柘城城关镇） | 200 / **17885 字节** ✅ | `{"code":200,"msg":"成功","data":{"balance":"0.0000"}}` |
+
+- 被拦时响应头完全正常，nginx 还回 `Set-Cookie: think_lang / KSSID` → PHP 已启动，
+  前置中间件**按出口 IP 在输出前静默 `exit`**，表现为「HTTP 200 + 整站空白」。
+  带 Chrome 指纹头 / 先取 Cookie / 正确签名 / 绑有线源 IP 全部无效。
+- **纯有线永远打不开**（那条宽带的公网 IP 不在白名单）；改 hosts、DNS、浏览器都没用，
+  唯一解法是让站点管理员把 `120.194.93.184` 加白名单。
+- 旁证：`demo.kasushou.com` 回「签名错误」；`vip.jqqy.cn` 回「网站API对接已关闭」。
+
+### 🚀 快速开始（连接方法，三选一）
+
+```bash
+# ① 零参数（推荐）：客户端自动遍历本机网卡，找到放行出口并绑定
+python kasushou_api.py user-info
+# → 自动选择放行网卡 192.168.0.101（默认路由被出口 IP 风控拦截）
+
+# ② 显式指定
+python kasushou_api.py goods-list --keyword 剪映 --bind 192.168.0.101
+
+# ③ 全局透明（浏览器也能直开，需管理员 CMD）
+route add 82.156.62.179 mask 255.255.255.255 192.168.0.1 metric 1
+route delete 82.156.62.179   # 撤销
+```
+
+⚠️ **网卡 IP 是 DHCP 分的，会变**（11-04 是 `192.168.0.102`、11-08 是 `192.168.0.101`），
+**别写死 IP**，用自动探测。当前命令通道 `IsAdmin=False`，`route add` 回「请求的操作需要提升」，
+需手动以管理员运行；WiFi 断了这条主机路由不会自动回退有线。
+
+### 已拿到的真实货源价
+
+`goods_price` = **供货价（进价）**、`face_value` = 面值（OpenAPI 文档确认）。
+剪映共 73 品，关键档位：SVIP 年卡 407 进价 **163.65**（面值 758、库存 9999）、
+408 = 163.68、416 官方直充可开票 171.45；链接直冲月卡 673 进价 **13.10**（库存 324）；
+VIP升SVIP季卡 431 = 32.87（升级条件苛刻）；团队版月卡 3 人 432 = 30.63。
+
+⚠️ **推翻旧推演**：年卡进价原估 149，实为 163.65 → 179 售价单净利 14.58（原 28.5），
+月净 6000 需日均 13.7 单（原 7 单），且占用 2244 元在途、1000 元本金跑不动。
+项目根目录 `还债路径_卡券副业推演.md` 已按实数重写：第 1–2 月先跑 13.10 进价的链接直冲月卡攒周转金，
+再切年卡 @189。原始数据 `货源价_剪映.json`，说明 `卡速售API对接说明.md`。
+
+---
+
 ## 🔗 相关
 
 - [[长期记忆]] —— 总索引

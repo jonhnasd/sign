@@ -629,6 +629,41 @@ python read_goofish_item.py 1084793623900            # ⑨ 闲鱼端验收 ✅
 - **不再使用** 省省(95131) / 星芒(95105) / 追梦(95329) / 千城(93310)（存量已按旧源配好的商品**不动**）。
 - `spec.acct` = 对应 alds 账号 ID，`deploy.py` 自动走该家配货，脚本层无需改动。
 
+## 十五、⭐ 批量把「亏本 SKU」库存清零（2026-11-08 实测）
+
+> 场景：定期巡检，把**售价低于实时货源进价**的档位停售（库存设 0），不改价、不删档、不下架商品。
+> 实测：在售 4 商品 28 SKU + 已下架的哈根达斯 5 SKU，命中 5 个亏本档，5/5 全部写成功并回读通过。
+
+### 判据（别用面值）
+
+| 项 | 值 |
+|---|---|
+| 亏本 | `售价 < GetDetail.salesPrice × multiple`（毛利 < −0.005） |
+| 进价来源 | 志远 `95425`（zy.kkam）/ 商战 `96810`（qqkami），**取商城进价，不是 `faceValue`** |
+| 在售 | `SearchGoodsList` 的 `status=0`；`-2`=下架、`-1`=删除；`status` 也可直接当查询参数 |
+| 成本未知 | **一律不动**（如 `supplierAccountId=0` / `supplierProductNo` 空），不猜不误伤 |
+
+### 三个必须注意
+
+1. 🔴 **首单引流款会被判据命中** —— 按上品 SOP，首单价 = 进价 − 0.30、库存 10、`ppt=1`，是**故意亏 0.3 元换流量**。要清 0 前先问用户是否连引流款一起清；本次用户明确「全部」，故 4 个引流款一并清零，并留了一键恢复脚本。
+2. **`Edit` 整份提交**：`GetItemInfo` 读全量 → 只改目标 SKU 的 `quantity` → 整体回写 → 回读校验（目标=0 / 非目标档 quantity+price 不变 / skuId 集合不变）。改动前把全量快照落盘备份。
+3. **商品级 `quantity` 会自动重算**：实测 13006→12007、129997→129987 等，服务端按各 SKU 库存之和派生，**不要主动改**（扩大改动面）。`Edit` 对**已下架商品**同样有效。
+
+### 通道提示
+
+`eval` 指令已坏（见 [[项目-edge-bridge]]），取 token 走 `cdp` 后门：
+`Runtime.evaluate{expression:"localStorage.getItem('TOKEN')", returnByValue:true}`，
+再用该 token 直连 `https://aldsidle.agiso.com` 的 `/api/GoodsManage/*`，无需页面内 fetch。
+
+### 落地位置
+
+脚本、备份与执行报告在 WorkBuddy 工作区
+`C:\Users\Administrator\Desktop\workbuddy\文档提取\agiso_stock\`
+（**不在本库 [[脚本索引]] 的扫描范围**），见该目录《亏本SKU库存清零_执行报告.md》的「🚀 快速开始」块：
+`apply_zero.py`（dry / `--go`，自动备份 + 回读校验）、`verify_final.py`（最终复核）、`restore.py --only=首单 --go`（恢复引流款）。
+
+> 遗留隐患：`1092321211319`「3200积分一天svip」售 6.58 但**无货源配置**，成本未知、下单可能发不出货，需单独处理。
+
 ## 🔗 相关
 - [[操作-阿奇索上品一条龙]] —— **流程层权威源**（上品工作流 / deploy 一条龙 / 填写模板 / 双闸 / 命名 / 文案 / 改价 / 周期 / 双维度），2026-11-04 整合自 WorkBuddy
 - [[项目-edge-bridge]] —— 用于自动化操作的后台桥接
