@@ -19,6 +19,9 @@ secrets/*.yaml
 .cache/
 .tmp/
 
+# ── WorkBuddy 本地状态（不属于知识库正文，禁止同步）────────
+.workbuddy/
+
 # ── Obsidian 工作区状态（可同步，但常带个人痕迹）────────
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json

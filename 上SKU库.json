@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-14",
+  "updated": "2026-11-15",
   "source_of_truth": "本文件是唯一机器主数据；上SKU库.md 为人工视图与维护日志；线上状态以只读巡检实时回读为准",
   "rules": {
     "read_only_audit": true,
@@ -439,6 +439,41 @@
         }
       ],
       "notes": "2026-11-14 自动驾驶发布（志远 pno=165 场景②）。同产品线 5 档：7天(165,6.46)/1个月(17249,13.81)/3个月(161,31.76)/6个月(21953,59.65)/12个月(160,95.71)；成本>20 三档被 SKU_COST_MAX 闸剔除，最终 2 档。1个月货源标题含「限价15」，执行价14.79未越限。⑩ 参数为通用名「充值账号」推断不出类型 → spec 显式 recharge_types=[1]（手机号）+ var_key=account + var_name=充值账号 → apiRechargeOnOff=True。标题最终「【自动充值】优酷视频VIP会员 7天/1个月 直充自己账号」（75/90字节）。主图复刻式三版：v1 出现多余竖线「填|写」+标题多 VIP；v2 修竖线但「不支持电视端」整行被删、空留图标；v3 五项白名单全中且设备说明保留 → 逐字核验通过。发布模板继承的知乎残留图 O1CN01qp2bsQuf… 已用最小 Edit 清除（后端自动带回 3 张自有 jpg）。onepipe_guard 16 项全通过；未做真实下单测试。 🔴 2026-11-14 更正：主图与描述曾把阿奇索字段名「充值账号」当买家填写内容印出（货源原文为「充值账号：填写优酷绑定手机号即可」）→ 主图重出为「下单填写手机号」，描述【填写内容】改手机号、清除上行残留的时效承诺词（24小时自动发货/秒接单），并删除多余图片只留自有主图。根因与修法见 replica_main_image.resolve_buyer_field（买家字段语义解析）与 create_from_pno.strip_template_images（模板占位图清理）。"
+    },
+    {
+      "goods_id": "1099192354403",
+      "name": "妙音悦钢琴尊贵会员 月卡季卡年卡 手机号直充",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 95425,
+      "source_name": "志远",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-15",
+      "last_live_verified": "2026-11-15",
+      "skus": [
+        {
+          "label": "1个月",
+          "sku_id": "6158317273002",
+          "pno": "26683",
+          "price": 0.11,
+          "cost_snapshot": 0.1
+        },
+        {
+          "label": "3个月",
+          "sku_id": "6158317273004",
+          "pno": "26682",
+          "price": 0.32,
+          "cost_snapshot": 0.3
+        },
+        {
+          "label": "12个月",
+          "sku_id": "6158317273003",
+          "pno": "26681",
+          "price": 1.3,
+          "cost_snapshot": 1.21
+        }
+      ],
+      "notes": "2026-11-15 自动驾驶发布（志远 pno=26683 场景②）。同产品线 3 档全上，成本均 ≤¥20；rechargeTemplates 明确「手机号/请输入手机号」→ recharge_types=[1] 自动推断，apiRechargeOnOff=True。主图按货源 imgUrl 复刻（最高档 12个月）并逐字核验盖章；描述手写 307 字含【档位对照】；onepipe_guard 16 项全通过；未做真实下单测试。坑① alds_dict.detail 参数顺序是 (pno, acct)，传反返回空 dict 会误判无充值模板；坑② PublishDraft 不回 itemId，按标题搜在售会命中 status=-2 且 goodsName 逐字相同的废弃空壳 1099189354760（同 outerId），故用 --title 给不同宽标题避开。遗留：废弃空壳 1099189354760 未删除，需用户拍板。"
     }
   ]
 }

@@ -176,7 +176,45 @@ explorer.exe "C:\Users\Administrator\.workbuddy\tools\edge\open-baidu.cmd"
 - 页面顶部会显示「正在调试此浏览器」黄条（正常）
 - 不做验证码识别
 
+## 上品运行时：自检脚本与常驻端点（2026-11-15）
+
+桥接本身只提供**浏览器原子能力**，跑一条龙还需要一层本机运行时。两个现成入口：
+
+### ① 环境自检 `preflight_env.py`（只读，前置条件的唯一机器判据）
+
+```bash
+cd "C:/Users/Administrator/WorkBuddy/2026-09-22-11-37-41/edge-bridge/tools"
+python preflight_env.py            # 加 --no-token 可跳过 agiso token 现取
+```
+
+输出 JSON：`ready` / `fatal[]` / `warnings[]` + 分区明细（python、bridge、agiso_token、sops/age 凭据、快跑 key、业务脚本、货源素材、writable）。**判据：`fatal` 非空就别往下跑**；退出码 0 = 全过。
+
+边界：不建草稿、不发布、不生图、不改线上商品；凭据只回报是否可解密，不打印明文；**主图逐字视觉核验仍需多模态/人工**，自检不能代替。
+
+### ② 常驻薄包装端点 `onepipe_service.py`（127.0.0.1:8788）
+
+```bash
+start_onepipe_service.bat          # 双击常驻；勿重复启动（端口占用）
+curl -s --noproxy '*' http://127.0.0.1:8788/health
+```
+
+| 端点 | 作用 |
+|---|---|
+| `GET /` `/health` | 存活与忙闲（`ok` / `busy`） |
+| `GET /preflight` | 跑上面的环境自检并回 JSON |
+| `POST /onepipe` | 跑一条龙；**默认 `dry=true`**，线上写必须 `dry:false` + `confirm:"GO"`（缺则 400） |
+| `GET /jobs/<id>` | 任务状态与日志 |
+| `GET /show?gid=` | 回读商品现状 |
+| `POST /inspect` | 跑 `onepipe_guard --inspect` |
+| `POST /verify-image` | ⑨b 盖章入口（**不自动判对**） |
+
+安全闸：全局串行锁防并发写线上（忙则 409）；可选 `--token`；命令不含凭据；每任务落 `onepipe_jobs/<id>.json/.log`。
+
+> ⚠️ 前提：Edge 已登录 agiso + 8787 常驻 + 调用方需 `danger-full-access` + 能访问 127.0.0.1 回环（**`curl` 必须加 `--noproxy '*'`**）。
+> 若 `/health` 连接被拒（curl exit 7）＝ 8788 没在跑，不是参数问题。
+
 ## 🔗 相关
 - [[操作-阿奇索宝贝SKU设置]] —— 用桥接自动填 SKU 的实战
+- [[操作-阿奇索上品一条龙]] —— 一条龙主流程（前置条件已接 `preflight_env.py`）
 - [[经验-踩坑手册]]
 - [[本机环境档案]]
