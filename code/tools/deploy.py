@@ -1239,7 +1239,7 @@ def prefilter_spec_suspended(spec, acct):
     return out, dropped
 
 
-def filter_plan_limits(plan, acct, cost_max=None, price_max=None):
+def filter_plan_limits(plan, acct, cost_max=None, price_max=None, spec=None, profit=None):
     """SKU 级不上架闸门：成本>20、货源余额门槛≥500、售价>150 分别独立判定。
 
     2026-11-12 用户明确：¥20 限制对象是货源成本，不是售价；售价可以超过 ¥20。
@@ -1282,8 +1282,52 @@ def filter_plan_limits(plan, acct, cost_max=None, price_max=None):
         if price > price_max:
             why.append("售价 %.2f>%g" % (price, price_max))
         if why:
-            print("  %-22s ❌ 不上（%s）" % (tag, "；".join(why)))
-            dropped.append((tag, "；".join(why), nm))
+            # 🔴 2026-11-15 用户定：「货源网站有余额限制换货源，没有就不上的不上」
+            #    余额门槛命中时**先换源**（其他站点同档同产品线、无门槛、成本合格），
+            #    换到就替换本档的 pno/acct/cost 继续上；换不到才剔除。
+            #    成本/售价超闸不换源（换源救不了成本），直接剔。
+            switched = False
+            if any(w.startswith("货源门槛余额") for w in why):
+                try:
+                    import sourcing as _SRC
+                    _spec = spec or {}
+                    _val = p.get("val") or "|".join(p.get("vals") or [])
+                    _kw = str(_spec.get("keyword") or "").strip() or \
+                        str(_spec.get("name") or "").strip() or _val
+                    _pf = profit if profit is not None else _spec.get("profit", D.DEFAULT_PROFIT)
+                    _best, _cands = _SRC.find_alternate_source(
+                        _val, _kw, int(p.get("acct") or acct),
+                        ref_title=str(_spec.get("ref_title") or ""),
+                        want_kind={"recharge": 1, "kaomi": 2}.get(str(_spec.get("kind") or "")),
+                        cost_max=cost_max)
+                    if _best:
+                        print("  %-22s 🔄 换源 → %s pno=%s 成本=%.2f（原源有余额门槛 %.0f）"
+                              % (tag, _SRC.acct_label(_best["acct"]),
+                                 _best["pno"], float(_best["cost"]), lb))
+                        p["switched_from"] = "%s pno=%s" % (nm or ("acct=%s" % a), pno)
+                        p["pno"] = _best["pno"]
+                        p["acct"] = _best["acct"]
+                        p["cost"] = _best["cost"]
+                        # 换源后成本变了 → 按同一利润率重算售价，避免利润率漂移
+                        try:
+                            _newc = float(_best["cost"])
+                            p["price"] = round(_newc / (1.0 - float(_pf)), 2)
+                            print("  %-22s    售价重算 %.2f → %.2f（成本 %.2f / 利润率 %.1f%%）"
+                                  % ("", price, p["price"], _newc, float(_pf) * 100))
+                        except Exception:
+                            p["price"] = price
+                        kept.append(p)
+                        switched = True
+                    else:
+                        _hint = "；".join(
+                            "%s:%s" % (_SRC.acct_label(c["acct"]), c["skip"])
+                            for c in _cands[:3] if c.get("skip")) or "其他站点无同档同产品线货源"
+                        print("  %-22s ⚠️ 换源失败 → %s" % (tag, _hint))
+                except Exception as _e:
+                    print("  %-22s ⚠️ 换源异常：%s" % (tag, str(_e)[:80]))
+            if not switched:
+                print("  %-22s ❌ 不上（%s）" % (tag, "；".join(why)))
+                dropped.append((tag, "；".join(why), nm))
         else:
             cost_text = "未知" if cost is None else "%.2f" % cost
             print("  %-22s 成本=%-8s 门槛余额=%-6s 售价=%-8.2f ✅" %
@@ -2481,7 +2525,8 @@ def main():
     plan = resolve_skus(spec, acct, profit, kind)
     # 🔴 成本已在定价前预筛；此处再独立筛货源余额门槛≥500、售价>150，并复核成本。
     # （¥20 限进价，售价可超过¥20。过滤必须在 auto_copy 前，避免淘汰档进入标题/文案/图片）
-    plan, _limit_dropped = (filter_plan_limits(plan, acct, cost_max=_cap, price_max=_pmax)
+    plan, _limit_dropped = (filter_plan_limits(plan, acct, cost_max=_cap, price_max=_pmax,
+                                               spec=spec, profit=profit)
                             if plan else (plan, []))
     _dropped = _cost_dropped + _susp_dropped + _limit_dropped
     if _dropped and not plan and kind not in ("single", "single_recharge"):

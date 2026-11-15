@@ -96,6 +96,14 @@ HARD_VARIANTS = (
     "儿童", "学生", "长者", "青春",
     "共享", "合租", "拼车", "家庭", "企业",
     "体验", "试用", "首月", "新用户",
+    # 🔴 兑换渠道 / 领取方式不同 = 不同产品线（2026-11-15 加）
+    #    实测 pno=14911「哔哩哔哩大会员1个月 | 同程app兑换」成本 ¥9.42，
+    #    比普会便宜，但它只能在「同程 app」内兑换 —— 买家在 B 站里用不了，
+    #    属货不对板。换源时若放行会直接发错货。
+    "同程", "携程", "美团", "京东", "淘宝", "支付宝", "云端", "端内", "指定app",
+    "链接直冲", "链接充值", "只支持", "仅支持", "限定",
+    "接码", "验证码", "需接码",
+    "共享号", "体验号", "租用", "出租",
 )
 
 
@@ -317,6 +325,78 @@ def compare_sources(tiers, accts=None, allow_daichong=False, balance_threshold=N
         best = min(usable, key=lambda c: float(c["cost"])) if usable else None
         out.append((val, best, cands))
     return out
+
+
+def find_alternate_source(tier_val, kw, bad_acct, ref_title="", want_kind=None,
+                          accts=None, cost_max=None, balance_threshold=None):
+    """R4 换源：某货源有余额门槛时，去**其他站点**找同档同产品线的替代。
+
+    2026-11-15 用户定：「货源网站有余额限制换货源，没有就不上的不上」
+      → 命中余额门槛**不是直接剔除**，而是先换源；换不到才不上。
+
+    返回 (best | None, 明细列表)。best = {val, acct, pno, title, cost}
+    只换源、不改档位/产品线/类型 —— 那三条仍由各自的闸把关。
+    """
+    from alds_kit import supplier as _SP
+
+    accts = [a for a in (accts or DEFAULT_ACCTS) if int(a) != int(bad_acct)]
+    cands = []
+    for acct in accts:
+        try:
+            prods = A.get_supplier_products(acct, kw) or []
+        except Exception:
+            continue
+        for p in prods:
+            pno = str(p.get("productNo"))
+            title = str(p.get("productTitle") or "")
+            # 档位必须完全一致（防错档）
+            if tier_canon(_SP.tier_val(title)) != tier_canon(tier_val):
+                continue
+            # 代充不换（R2）
+            if is_daichong(p)[0]:
+                continue
+            # 类型必须同装（R1）
+            pt = product_type_of(p)
+            if want_kind is not None and pt is not None and pt != want_kind:
+                continue
+            # 产品线必须同一（防升级版/共享版）
+            if ref_title and not same_product_line(ref_title, title)[0]:
+                continue
+            try:
+                d = D.detail(pno, acct) or {}
+            except Exception:
+                continue
+            # 新货源自己也不能有余额门槛
+            blk, lb = balance_blocked(d, balance_threshold)
+            if blk:
+                cands.append({"val": tier_val, "acct": acct, "pno": pno,
+                              "title": title, "cost": None,
+                              "skip": "该源也有门槛≥%.0f" % lb})
+                continue
+            try:
+                cost = D.cost(pno, acct)
+            except Exception:
+                cost = None
+            if cost is None:
+                continue
+            if cost_max is not None and float(cost) > float(cost_max):
+                cands.append({"val": tier_val, "acct": acct, "pno": pno,
+                              "title": title, "cost": cost,
+                              "skip": "成本%.2f>%g" % (float(cost), float(cost_max))})
+                continue
+            cands.append({"val": tier_val, "acct": acct, "pno": pno,
+                          "title": title, "cost": cost, "skip": ""})
+
+    usable = [c for c in cands if not c["skip"]]
+    # 🔴 异常低价闸必须在这里也过一次。
+    #    2026-11-15 实测：漏掉这步时换源选中了 pno=8276（¥1.31 的「链接直冲」），
+    #    正是 compare_sources 里被价格合理性闸拦掉的那个坑。
+    #    换源和比价必须用同一套判据，否则换个入口就能绕过去。
+    usable, outliers = flag_price_outliers(usable)
+    for c, why in outliers:
+        c["skip"] = why
+    best = min(usable, key=lambda c: float(c["cost"])) if usable else None
+    return best, cands
 
 
 def format_compare(report):

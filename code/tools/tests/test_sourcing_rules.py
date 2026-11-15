@@ -68,6 +68,23 @@ ck("共享版 被拒",
 ck("同产品线 放行",
    S.same_product_line("哔哩哔哩大会员1个月", "哔哩哔哩大会员月卡")[0], True)
 
+print("\n=== 兑换渠道不同 = 不同产品线（2026-11-15 实测坑）===")
+# pno=14911「同程app兑换」¥9.42，比普会便宜，但只能在同程app内兑换 → 买家在B站用不了
+ck("同程app兑换 被拒",
+   S.same_product_line("哔哩哔哩大会员", "哔哩哔哩大会员1个月 | 同程app兑换")[0], False)
+ck("链接直冲 被拒",
+   S.same_product_line("哔哩哔哩大会员", "【只支持移动手机号充值】哔哩哔哩大会员月卡----链接直冲")[0], False)
+ck("官方CDK 放行",
+   S.same_product_line("哔哩哔哩大会员", "【官方CDK】哔哩哔哩大会员1个月")[0], True)
+
+print("\n=== 换源时异常低价闸必须同样生效（R4 换源不能绕过 R3 的价闸）===")
+fake_alt = [{"val": "1个月", "acct": 1, "pno": "a", "cost": 9.42, "skip": ""},
+            {"val": "1个月", "acct": 1, "pno": "b", "cost": 12.46, "skip": ""},
+            {"val": "1个月", "acct": 1, "pno": "c", "cost": 13.07, "skip": ""},
+            {"val": "1个月", "acct": 2, "pno": "d", "cost": 1.31, "skip": ""}]
+u2, out2 = S.flag_price_outliers(fake_alt)
+ck("换源候选里 ¥1.31 也须被标异常", [c["pno"] for c, _ in out2], ["d"])
+
 print("\n=== 异常低价闸 ===")
 fake = [{"cost": 9.42, "pno": "a"}, {"cost": 12.46, "pno": "b"}, {"cost": 1.31, "pno": "c"}]
 kept, dropped = S.flag_price_outliers(fake)
