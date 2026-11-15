@@ -67,14 +67,20 @@ def main():
         prod = [x for x in FAKE if x['productNo'] == pno][0]
         a, ma = new.build_payload(prod, 95425, str(pno), dict(TPL), ARGS)
         b, mb = old.build_payload(prod, 95425, str(pno), dict(TPL), ARGS)
-        okk = (a == b) and (ma == mb)
+        # 🔴 2026-11-15：地区改为「随机省会」（用户定），每次结果不同，
+        #    新旧等价性比对必须排除这两个字段，否则每跑一次都报差异。
+        #    地区正确性由 tests/test_divisions.py 单独保证。
+        _DIV_KEYS = ('divisionId', 'divisionIdList')
+        a_cmp = {k: v for k, v in a.items() if k not in _DIV_KEYS}
+        b_cmp = {k: v for k, v in b.items() if k not in _DIV_KEYS}
+        okk = (a_cmp == b_cmp) and (ma == mb)
         bad += 0 if okk else 1
         print('  pno=%-4s 售价=%-6s 标题=%-24s %s' % (
             pno, ma['price'], ma['title'], 'OK' if okk else '❌ 差异'))
         if not okk:
-            for k in set(a) | set(b):
-                if a.get(k) != b.get(k):
-                    print('      字段 %s: new=%r old=%r' % (k, a.get(k), b.get(k)))
+            for k in set(a_cmp) | set(b_cmp):
+                if a_cmp.get(k) != b_cmp.get(k):
+                    print('      字段 %s: new=%r old=%r' % (k, a_cmp.get(k), b_cmp.get(k)))
 
     print('== find_product 找不到时的报错文本')
     try:

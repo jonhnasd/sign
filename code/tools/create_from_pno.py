@@ -101,9 +101,27 @@ def build_payload(prod, acct, pno, template, args):
         'timedPublish': False,
         'virtualGameGoods': False,
     })
+    # 🔴 2026-11-15 用户定：「新建宝贝的地区要随机选省会城市，不要只有一个城市」
+    #    旧行为：模板地区被原样继承，且下面硬编码兜底 ['130000','130300','130304']
+    #    （河北保定）→ 全店 54 件商品里 14 件同城，暴露同一发货地。
+    #    新行为：每件商品随机落一个省会城市（31 个候选），并避开模板自带的城市。
+    #    divisionIdList 必须完整 3 级，服务端硬校验（缺级报 DivisionIdList长度不正确）。
+    _div = None
+    try:
+        import cn_divisions as _CN
+        _tpl_div = list(p.get('divisionIdList') or [])
+        _avoid = [_tpl_div[2]] if len(_tpl_div) == 3 else []
+        _div = _CN.pick(avoid=_avoid)
+        p['divisionIdList'] = _div['divisionIdList']
+        p['divisionId'] = _div['divisionId']
+        print('  地区         : %s（随机省会，避开模板 %s）'
+              % (_div['name'], '/'.join(_tpl_div) or '无'))
+    except Exception as _e:
+        print('  ⚠️ 省会随机失败（%s），回退河北保定' % str(_e)[:60])
     # 服务端硬校验：divisionIdList 必须是完整 3 级
     if len(p.get('divisionIdList') or []) != 3:
         p['divisionIdList'] = ['130000', '130300', '130304']
+        p['divisionId'] = 130304
     return p, {'title': title, 'risk_words_removed': removed, 'cost': cost,
                'price': price, 'productType': prod.get('productType')}
 
@@ -444,6 +462,19 @@ def main():
         tpl.setdefault('transportFee', '0')
         tpl.setdefault('divisionId', 0)
         tpl.setdefault('onlyTaskSelf', False)
+        # 🔴 2026-11-15：类目按线路表判定，不盲从模板。
+        #    实测：拿 b 站商品(50023914 剪映线)当模板建抖音短剧 →
+        #    发布报「类目检查限制」。见 category_route.py 模块说明。
+        try:
+            import category_route as _CAT
+            _cat = _CAT.resolve(tpl.get('categoryId'), tpl.get('channelCatId'),
+                                str(args.title or ''))
+            tpl['categoryId'] = _cat['categoryId']
+            tpl['channelCatId'] = _cat['channelCatId']
+            if _cat.get('spBizType'):
+                tpl['spBizType'] = _cat['spBizType']
+        except Exception as _e:
+            print('  ⚠️ 类目线路判定失败（%s），沿用模板值' % str(_e)[:60])
     else:
         ds = drafts()
         # 🔴 只挑字段完整的草稿当模板：Publish 失败会写一条 title=None 的空草稿，
