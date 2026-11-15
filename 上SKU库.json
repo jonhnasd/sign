@@ -1,0 +1,444 @@
+{
+  "version": 1,
+  "updated": "2026-11-14",
+  "source_of_truth": "本文件是唯一机器主数据；上SKU库.md 为人工视图与维护日志；线上状态以只读巡检实时回读为准",
+  "rules": {
+    "read_only_audit": true,
+    "unknown_is_not_ok": true,
+    "source_health_checks": [
+      "阿奇索商品仍绑定目标货源账号和货源编号",
+      "货源商品在货源侧仍存在",
+      "可读取时检查货源可购状态和实时进价",
+      "对比售价与实时进价，售价低于成本只报警，不自动改库存或价格"
+    ]
+  },
+  "products": [
+    {
+      "goods_id": "1100446952795",
+      "name": "剪映SVIP会员·充值链接",
+      "type": "卡密链接充值",
+      "status": "在线",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-11",
+      "last_live_verified": "2026-11-11",
+      "skus": [
+        {
+          "label": "日卡",
+          "sku_id": "6157160261007",
+          "pno": "1176",
+          "price": 2.58,
+          "cost_snapshot": 1.39
+        },
+        {
+          "label": "三天",
+          "sku_id": "6157160261008",
+          "pno": "1175",
+          "price": 3.88,
+          "cost_snapshot": 3.29
+        },
+        {
+          "label": "周卡",
+          "sku_id": "6157160261009",
+          "pno": "1174",
+          "price": 6.98,
+          "cost_snapshot": 5.09
+        },
+        {
+          "label": "月卡",
+          "sku_id": "6157160261010",
+          "pno": "1177",
+          "price": 12.32,
+          "cost_snapshot": 12.09
+        }
+      ],
+      "notes": "2026-11-11 主图、4档SKU、描述、标题补全并回读成功；未做真实订单测试。"
+    },
+    {
+      "goods_id": "1097000155425",
+      "name": "剪映SVIP会员·链接充值",
+      "type": "卡密链接充值",
+      "status": "待实时复核",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-10",
+      "last_live_verified": "2026-11-10",
+      "skus": [
+        {
+          "label": "天卡",
+          "sku_id": "6156714313521",
+          "pno": "1176",
+          "price_snapshot": 1.49,
+          "cost_snapshot": 1.39
+        },
+        {
+          "label": "3天卡",
+          "sku_id": "6156714313522",
+          "pno": "1175",
+          "price_snapshot": 3.53,
+          "cost_snapshot": 3.29
+        },
+        {
+          "label": "周卡",
+          "sku_id": "6156714313523",
+          "pno": "1174",
+          "price_snapshot": 5.45,
+          "cost_snapshot": 5.09
+        },
+        {
+          "label": "月卡",
+          "sku_id": "6156714313524",
+          "pno": "1177",
+          "price_snapshot": 12.95,
+          "cost_snapshot": 12.09
+        }
+      ],
+      "notes": "来源于2026-11-10全量快照；当前线上实时状态由巡检回读覆盖。"
+    },
+    {
+      "goods_id": "1100124692806",
+      "name": "剪映SVIP会员·链接充值",
+      "type": "卡密链接充值",
+      "status": "待实时复核",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-10",
+      "last_live_verified": "2026-11-10",
+      "skus": [
+        {
+          "label": "天卡",
+          "sku_id": "6320817491172",
+          "pno": "1176",
+          "price_snapshot": 1.49,
+          "cost_snapshot": 1.39
+        },
+        {
+          "label": "3天卡",
+          "sku_id": "6320817491173",
+          "pno": "1175",
+          "price_snapshot": 3.53,
+          "cost_snapshot": 3.29
+        },
+        {
+          "label": "周卡",
+          "sku_id": "6320817491174",
+          "pno": "1174",
+          "price_snapshot": 5.45,
+          "cost_snapshot": 5.09
+        },
+        {
+          "label": "月卡",
+          "sku_id": "6320817491175",
+          "pno": "1177",
+          "price_snapshot": 12.95,
+          "cost_snapshot": 12.09
+        }
+      ],
+      "notes": "来源于2026-11-10全量快照；此前增量改价接口出现返回成功但不落库，巡检必须回读SKU价格。"
+    },
+    {
+      "goods_id": "1096735887393",
+      "name": "剪映SVIP·天卡/3200积分链接充值",
+      "type": "卡密链接充值",
+      "status": "待实时复核",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-09",
+      "last_live_verified": "2026-11-09",
+      "skus": [
+        {
+          "label": "天卡",
+          "sku_id": "6156415001371",
+          "pno": "1176",
+          "price_snapshot": 1.49,
+          "cost_snapshot": 1.39
+        },
+        {
+          "label": "天卡+3200积分",
+          "sku_id": "6156415001372",
+          "pno": "1167",
+          "price_snapshot": 6.42,
+          "cost_snapshot": 5.99
+        }
+      ],
+      "notes": "来源于2026-11-09全量快照。"
+    },
+    {
+      "goods_id": "1096737823598",
+      "name": "剪映SVIP·3200积分商家号链接充值",
+      "type": "卡密链接充值",
+      "status": "待实时复核",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-09",
+      "last_live_verified": "2026-11-09",
+      "skus": [
+        {
+          "label": "3200积分·24小时",
+          "sku_id": "6320342662398",
+          "pno": "1173",
+          "price_snapshot": 3.86,
+          "cost_snapshot": 3.6
+        }
+      ],
+      "notes": "商家号档例外：充到共享商家号，不是买家个人账号；来源于2026-11-09全量快照。"
+    },
+    {
+      "goods_id": "1097674798748",
+      "name": "剪映SVIP会员·天卡/3天/周卡/月卡",
+      "type": "卡密链接充值",
+      "status": "待实时复核",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-09",
+      "last_live_verified": "2026-11-09",
+      "skus": [
+        {
+          "label": "天卡",
+          "sku_id": "6156366949996",
+          "pno": "1176",
+          "price_snapshot": 1.49,
+          "cost_snapshot": 1.39
+        },
+        {
+          "label": "3天卡",
+          "sku_id": "6156366949997",
+          "pno": "1175",
+          "price_snapshot": 3.53,
+          "cost_snapshot": 3.29
+        },
+        {
+          "label": "周卡",
+          "sku_id": "6156366949998",
+          "pno": "1174",
+          "price_snapshot": 5.45,
+          "cost_snapshot": 5.09
+        },
+        {
+          "label": "月卡",
+          "sku_id": "6156366949999",
+          "pno": "1177",
+          "price_snapshot": 12.95,
+          "cost_snapshot": 12.09
+        }
+      ],
+      "notes": "库内快照曾见旧 productType=1，不能直接当当前形态；本库以实时巡检回读为准，若仍为直充配置需单独纠正。"
+    },
+    {
+      "goods_id": "1099659265490",
+      "name": "百度DuMate积分 500至10000积分 直充自己账号",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 95425,
+      "source_name": "志远",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-12",
+      "last_live_verified": "2026-11-12",
+      "skus": [
+        {
+          "label": "500积分",
+          "sku_id": "6156951084086",
+          "pno": "26375",
+          "price": 0.96,
+          "cost_snapshot": 0.892
+        },
+        {
+          "label": "2500积分",
+          "sku_id": "6156951084085",
+          "pno": "26374",
+          "price": 3.98,
+          "cost_snapshot": 3.715
+        },
+        {
+          "label": "5000积分",
+          "sku_id": "6156951084084",
+          "pno": "26373",
+          "price": 7.9,
+          "cost_snapshot": 7.376
+        },
+        {
+          "label": "10000积分",
+          "sku_id": "6156951084083",
+          "pno": "26372",
+          "price": 15.74,
+          "cost_snapshot": 14.702
+        }
+      ],
+      "notes": "2026-11-12 自动驾驶发布：create_from_pno.py 默认 --go 一条龙（建草稿→发布→deploy→快跑主图），11 项守卫全通过；直充商品(productType=1)，apiRechargeOnOff=True；利润率约6.6%（500档因取整约7.1%）；标题/描述/主图均按授权自动处理，未实时下单测试。"
+    },
+    {
+      "goods_id": "1100813876979",
+      "name": "知乎盐选会员 14天/1个月 直充自己账号",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 95425,
+      "source_name": "志远",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-13",
+      "last_live_verified": "2026-11-13",
+      "skus": [
+        {
+          "label": "14天",
+          "sku_id": "6157100292616",
+          "pno": "14832",
+          "price": 9.9,
+          "cost_snapshot": 9.25
+        },
+        {
+          "label": "1个月",
+          "sku_id": "6157100292617",
+          "pno": "15231",
+          "price": 12.32,
+          "cost_snapshot": 10.65
+        }
+      ],
+      "notes": "2026-11-13 自动驾驶发布（pno=15231 场景②），当日用户要求撤回所有成本/售价>20 的档 → 改 spec sku_cost_max=20 重跑 deploy --force，3个月(进价29.444/售31.52)与12个月(进价90.25/售96.63)已从闲鱼商品删除，仅留 14天(9.9)/1个月(12.32)。重建后 skuId 已重排(6157100292616/617)。2个月(14831)此前已剔除(后端拒绝持久化attach)；24个月(14559)因成本160.95被成本闸挡。已知小瑕疵：⑦描述【档位对照】价(11.35)与实付价(12.32)因⑪/⑫成本口径略差异略有出入，不影响成交。修两处脚本bug：product_family 同档去重、sku_ok 校验 attach。"
+    },
+    {
+      "goods_id": "1100879952009",
+      "name": "【官方卡密】魔音工坊VIP标准版 1天一号限一次/月卡 卡密发货",
+      "type": "官方卡密",
+      "status": "在线",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-13",
+      "last_live_verified": "2026-11-13",
+      "skus": [
+        {
+          "label": "1天·一号限一次",
+          "sku_id": "6321809903317",
+          "pno": "10",
+          "price": 0.59,
+          "cost_snapshot": 0.55
+        },
+        {
+          "label": "月卡",
+          "sku_id": "6157700829367",
+          "pno": "11",
+          "price": 20.63,
+          "cost_snapshot": 19.27
+        }
+      ],
+      "notes": "2026-11-13 自动驾驶发布（思券 id=11 场景②）。🔴 关键映射：思券 CRMEB 商品 id 与 agiso 货源 pno 是同一套编号（id=11 → pno=11）。货源标题『【官方卡密】魔音工坊VIP标准版『月卡』限价25.8』，productType=2 卡密，成本19.27。同产品线自动带出 pno=10（标准版1天，成本0.55）。类目踩坑：剪映模板的 categoryId=50023914/channelCatId=4687e5ab 报『类目检查限制』→ 改用知乎盐选模板 1100813876979 的 categoryId=50025461/channelCatId=35d467e7 发布成功。文案踩坑：思券该商品介绍为空 → auto_copy() 无素材直接 return，描述停在72字默认模板且无【档位对照】→ 手写 spec.title/spec.desc（含【档位对照】1天——0.59元/月卡——20.63元）后 ⑦ 转绿，11/11 全通过。修三处脚本bug：_tier_val 优先读『』内档位、_family_stem 按『』截产品线前缀、publish() 轮询改判内层 successCount（原误判外层 isSuccess 导致拿不到 itemId）。2026-11-13 下午限制标注：pno10 货源标题含『一号限制充一次』→ SKU 档位改名『1天·一号限一次』，改名导致 skuId 重排 6157700829366→6321809903317（月卡不变），已按新ID重配货源与自动改价（Income 0.0389 继承）；两档 additional 里知乎模板继承的美团外卖文案已换成魔音工坊说明；模板遗留第二张图（=知乎模板第一张图）未再出现，线上仅 1 张自有图；onepipe_guard 11 项全通过。"
+    },
+    {
+      "goods_id": "1098716682922",
+      "name": "高途阅读SVIP+VIP会员 2年/永久 账号直充",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-13",
+      "last_live_verified": "2026-11-13",
+      "skus": [
+        {
+          "label": "2年",
+          "sku_id": "6321692858501",
+          "pno": "236",
+          "price": 8.78,
+          "cost_snapshot": 8.2
+        },
+        {
+          "label": "永久",
+          "sku_id": "6321692858502",
+          "pno": "237",
+          "price": 16.92,
+          "cost_snapshot": 15.8
+        }
+      ],
+      "notes": "2026-11-13 自动驾驶发布（思券 pno=236 场景②）。同产品线带出 237『永久』档（成本15.8，两档均≤20 且可购）。kind=recharge（productType=1），充值参数=思券通用名（充值账号/充值链接/验证码）无明确类型信号 → spec 显式 recharge_types=[1]（手机号）+ var_key/var_name；OpenRecharge 成功 apiRechargeOnOff=True。🔴 踩坑：首次 deploy 用 golden 模板带的 attach（无 value 字段）→ sku_ok 只查 attach 非空误判『已正确』跳过 → guard ⑤ 报『占位符缺失』；手工重发两档 SaveSkuAldsInfo 补 attach.value={$充值账号} 后转绿。sku_ok 今后应同时校验 attach 内含非空 value。描述手写（思券无介绍素材）含【档位对照】2年 8.78/永久 16.92，⑦ 269 字对照价一致。模板残留图 O1CN01qp…（知乎模板首图）经最小 Edit 清除，保留快跑主图+后端自动带回的快跑原图共 2 张。修脚本 bug：_tier_val 二修——『』内没命中单位词时直接取『』内容（『永久』这类非数字档位词），不再回退全标题（旧逻辑把标题后段『24小时全天秒单』抽成档位）。onepipe_guard 14 项全通过。"
+    },
+    {
+      "goods_id": "1100910304959",
+      "name": "高途阅读VIP会员 2年/终身 官方卡密",
+      "type": "官方卡密",
+      "status": "在线",
+      "source_account": 99569,
+      "source_name": "思券",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-13",
+      "last_live_verified": "2026-11-13",
+      "skus": [
+        {
+          "label": "2年",
+          "sku_id": "6321700118308",
+          "pno": "8",
+          "price": 5.99,
+          "cost_snapshot": 5.59
+        },
+        {
+          "label": "终身",
+          "sku_id": "6321700118309",
+          "pno": "9",
+          "price": 11.34,
+          "cost_snapshot": 10.59
+        }
+      ],
+      "notes": "2026-11-13 自动驾驶发布（思券 pno=9 场景②），同产品线带出 pno8『2年』和 pno9『终身』两档，均卡密(productType=2)，售价5.99/11.34、成本5.59/10.59。思券手机通道当时无已连接ADB，未取得介绍/图集，故采用保守官方卡密说明，未编造具体兑换步骤。首次体检发现第二张图 O1CN01qp2bsQuflMG… 是知乎盐选会员模板残留；逐图视觉确认后保存整商品快照并最小 Edit 移除，仅保留高途快跑主图。回读确认 SKU ID/售价未变，图片字段仅剩自有主图；onepipe_guard 14项全通过。未做真实下单测试。"
+    },
+    {
+      "goods_id": "1097971051544",
+      "name": "【自动充值】新浪微博会员 1个月/3个月 下单填写微博昵称",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 95425,
+      "source_name": "志远",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-14",
+      "last_live_verified": "2026-11-14",
+      "skus": [
+        {
+          "label": "1个月",
+          "sku_id": "6321909386693",
+          "pno": "1425",
+          "price": 9.57,
+          "cost_snapshot": 8.9
+        },
+        {
+          "label": "3个月",
+          "sku_id": "6321909386692",
+          "pno": "1424",
+          "price": 11.32,
+          "cost_snapshot": 10.571
+        }
+      ],
+      "notes": "2026-11-14 自动驾驶发布（志远 pno=1425 场景②）。同产品线 1423『12个月』成本 ¥40.047>20 被 SKU_COST_MAX 闸剔除，最终 2 档：1个月(pno1425,成本8.9,售9.57)、3个月(pno1424,成本10.571,售11.32)。kind=recharge（productType=1，货源介绍明确『填写微博昵称』，popup_fields 为微博昵称必填）。⑩ 下单参数为通用名（充值账号/充值链接/验证码）推断不出类型 → 手工 OpenRecharge rechargeAccountTypes=[4]（平台账号；排除手机1/QQ8/微信16/邮箱32/抖音快手ID256/剪映号128 后唯一匹配），apiRechargeOnOff=True。快跑 gpt-image-2.6 生主图并置顶；知乎模板残留图 O1CN01qp… 经最小 Edit 移除，回读 SKU ID/售价不变。🔴 已知限制：3个月档 attach.title 仍为默认『充值账号』，SaveSkuAldsInfo 返回成功但后端不重新持久化已 INSERT 记录的 attach（与 15231 案例同源），未统一为『微博昵称』；attach 本身完整（value={$充值账号}、autoSend=True、pno 绑定正常），不影响发货。🔴 脚本修复：agiso_direct.get_supplier_products 带 keyword 时原本只取第一页（服务端把 pageSize 压成固定 20），1425 落在第 2 页被漏掉 → 改为一律翻页到空页。onepipe_guard 15 项全通过。未做真实下单测试。"
+    },
+    {
+      "goods_id": "1100033725771",
+      "name": "【自动充值】优酷视频VIP会员 7天/1个月 直充自己账号",
+      "type": "官方直充",
+      "status": "在线",
+      "source_account": 95425,
+      "source_name": "志远",
+      "source_check_route": "agiso_supplier_list",
+      "source_checked_at": "2026-11-14",
+      "last_live_verified": "2026-11-14",
+      "skus": [
+        {
+          "label": "7天",
+          "sku_id": "6157966925800",
+          "pno": "165",
+          "price": 6.92,
+          "cost_snapshot": 6.46
+        },
+        {
+          "label": "1个月",
+          "sku_id": "6157966925801",
+          "pno": "17249",
+          "price": 14.79,
+          "cost_snapshot": 13.81
+        }
+      ],
+      "notes": "2026-11-14 自动驾驶发布（志远 pno=165 场景②）。同产品线 5 档：7天(165,6.46)/1个月(17249,13.81)/3个月(161,31.76)/6个月(21953,59.65)/12个月(160,95.71)；成本>20 三档被 SKU_COST_MAX 闸剔除，最终 2 档。1个月货源标题含「限价15」，执行价14.79未越限。⑩ 参数为通用名「充值账号」推断不出类型 → spec 显式 recharge_types=[1]（手机号）+ var_key=account + var_name=充值账号 → apiRechargeOnOff=True。标题最终「【自动充值】优酷视频VIP会员 7天/1个月 直充自己账号」（75/90字节）。主图复刻式三版：v1 出现多余竖线「填|写」+标题多 VIP；v2 修竖线但「不支持电视端」整行被删、空留图标；v3 五项白名单全中且设备说明保留 → 逐字核验通过。发布模板继承的知乎残留图 O1CN01qp2bsQuf… 已用最小 Edit 清除（后端自动带回 3 张自有 jpg）。onepipe_guard 16 项全通过；未做真实下单测试。 🔴 2026-11-14 更正：主图与描述曾把阿奇索字段名「充值账号」当买家填写内容印出（货源原文为「充值账号：填写优酷绑定手机号即可」）→ 主图重出为「下单填写手机号」，描述【填写内容】改手机号、清除上行残留的时效承诺词（24小时自动发货/秒接单），并删除多余图片只留自有主图。根因与修法见 replica_main_image.resolve_buyer_field（买家字段语义解析）与 create_from_pno.strip_template_images（模板占位图清理）。"
+    }
+  ]
+}

@@ -7,6 +7,9 @@ updated: 2026-11-05
 tags: [身份, 用户档案]
 type: 身份文件
 status: draft
+execution: read_only
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 
 # USER.md - About Your Human

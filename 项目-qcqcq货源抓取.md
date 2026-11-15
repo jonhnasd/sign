@@ -4,6 +4,9 @@ type: 项目笔记
 created: 2026-09-23
 updated: 2026-09-23
 status: legacy
+execution: read_only
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 
 # 🕸 项目：88.qcqcq.com 货源站抓取

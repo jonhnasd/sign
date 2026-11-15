@@ -4,6 +4,9 @@ updated: 2026-11-05
 tags: [项目, 浏览器, 桥接]
 type: 项目笔记
 status: active
+execution: write_verified
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 # 项目 · Edge Bridge（浏览器桥接）
 

@@ -8,6 +8,9 @@ updated: 2026-11-05
 tags: [身份, 人格]
 type: 身份文件
 status: active
+execution: read_only
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 
 # SOUL.md - Who You Are

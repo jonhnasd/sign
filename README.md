@@ -4,6 +4,9 @@ updated: 2026-11-05
 tags: [索引, 架构说明]
 type: 索引
 status: active
+execution: read_only
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 # 📚 Obsidian 记忆库
 
@@ -23,7 +26,7 @@ status: active
                    ↓            ↓
         ┌──────────────┐   ┌──────────────┐
         │  明文可读     │   │   加密存放    │
-        │ 13篇专题笔记  │   │ secrets/     │
+        │ 操作 / 项目笔记 │   │ secrets/     │
         │ 身份与记忆/   │   │ (sops+age)  │
         └──────────────┘   └──────────────┘
                    ↓            ↓
@@ -48,6 +51,9 @@ status: active
 | `记忆-回写规范.md` | 读写规则 + 完整性检查器 | — |
 | `项目-*.md` | 各项目专题方案 | — |
 | `操作-*.md` | 各操作流程手册 | — |
+| `上SKU库.json` | 已上商品、SKU、货源与核验状态（唯一机器主数据） | — |
+| `上SKU库.md` | 由 JSON 对照维护的人类视图 + 维护日志，不作为机器读取源 | — |
+| `闲鱼主图范式库.md` / `操作-历史课件惊艳工作流.md` | 主图与历史课件设计方法 | — |
 | **`身份与记忆/`** | MEMORY.md / SOUL / IDENTITY / USER | — |
 | **`secrets/`** | 货源平台凭据 | ✅ **sops + age** |
 | `.sops.yaml` | SOPS 配置（age 公钥，公钥非敏感） | — |
@@ -118,6 +124,7 @@ SOPS_AGE_KEY_FILE="C:/Users/Administrator/.workbuddy/tools/crypto/age/keys.txt" 
 - **age 私钥绝不进仓库**（`.gitignore` 已兜底，但也要自己注意）
 - 私钥丢了 = 密文永久无法解密 → **务必另存一份到云盘/密码管理器**
 - 凭据只用于本地调用，**不外传**
+- **凭据可以入库，但必须加密**（2026-11-11 用户明确）：明文一律不写进笔记 / 日志 / 仓库文件；需留存时用 `sops --set '["别名"]["key"] "值"'` 写进 `secrets/credentials.sops.yaml`，确认值是 `ENC[AES256_GCM,...]` 密文；取用走 `sops --decrypt --extract '["别名"]["key"]'` 临时注入环境变量
 
 ### 🔑 换设备恢复流程（照着做，一步别漏）
 
@@ -125,8 +132,8 @@ SOPS_AGE_KEY_FILE="C:/Users/Administrator/.workbuddy/tools/crypto/age/keys.txt" 
 
 ```bash
 # ── 1. clone 仓库 ──
-git clone git@github.com:jonhnasd/obsidian-vault.git
-cd obsidian-vault
+git clone git@github.com:jonhnasd/sign.git
+cd sign
 
 # ── 2. 装工具（age + sops）──
 #    到 https://github.com/FiloSottile/age/releases 和
@@ -181,8 +188,7 @@ bash C:/Users/Administrator/.workbuddy/tools/crypto/publish.sh <仓库名> --che
   "C:/Users/Administrator/.workbuddy/tools/adb/check_vault.py"
 ```
 
-检查 7 项：索引覆盖 / 速查表覆盖 / 双链断链 / 敏感凭据 / daily log 超 30 天未蒸馏 /
-**legacy 笔记是否加口径提示** / **frontmatter 完整性** / **库内口径交叉引用**。
+检查范围以当前检查器输出为准，包含：索引覆盖、双链断链、敏感凭据、daily log 超 30 天未蒸馏、legacy 口径提示、frontmatter、口径交叉引用、操作层完整性、脚本有效性、自动生成索引新鲜度及结构完整性。退出码 `0` 表示检查器所覆盖项目通过；不代表 Git 同步边界、外部路径有效性、双数据文件一致性或流程实际可执行性均已验证。
 退出码 `0` = 全通过。
 
 ### 重新生成「最近变更.md」
@@ -207,16 +213,25 @@ bash C:/Users/Administrator/.workbuddy/tools/crypto/gen-changelog.sh [天数]   
 
 ## 七、Git 同步
 
+以下仅为**首次初始化新建仓库**示例。当前仓库已存在，勿对现有工作区照抄；初始化前也必须逐项审查文件，不能把本地状态或敏感文件一并加入：
+
 ```bash
 cd "C:/Users/Administrator/Desktop/obisidian/obisidian"
 git init
-git add -A
+git add README.md .gitignore
+# 按审查后的文件清单逐项 git add <path>
+git diff --cached --check
 git commit -m "init: obsidian memory vault"
-git remote add origin git@github.com:jonhnasd/<repo>.git
+git remote add origin git@github.com:jonhnasd/sign.git
 git push -u origin main
 ```
 
-**推之前必查**：`git status` 里不能出现 `secrets/credentials.yaml`（明文）、`age/keys.txt`。
+**推之前必查**：
+
+1. `git status --short` 中不能出现 `secrets/credentials.yaml`（明文）、`age/keys.txt`、`.workbuddy/`。
+2. 先确认新增文件属于知识库正文、加密凭据或已审查的素材资产；不确定的本地状态和临时产物不加入。
+3. 不使用 `git add -A` 作为无人审核的自动同步策略；自动化应使用明确白名单或先生成待推送清单。
+4. `git diff --cached --check` 通过后再提交和推送。
 
 ---
 

@@ -1,0 +1,101 @@
+{
+ "说明": "只记 host / 路径 / 参数用途，凭据不写进笔记或交付物",
+ "sources": [
+  {
+   "source": "志远",
+   "acct": 95425,
+   "host": "https://zy.kkam.cn",
+   "proto": "v3 / POST JSON / 头 X-APP-ID, X-Version, X-Timestamp, X-Signature",
+   "sign": "md5(app_id + secret + version + ts + body_json)",
+   "endpoints": [
+    {
+     "name": "商品列表",
+     "url": "/api/v3/goods/getList",
+     "body": "{\"keyword\":\"\",\"page\":1,\"pageSize\":100}",
+     "note": "分页，读 data.allPage；goodsId = pno"
+    },
+    {
+     "name": "商品详情",
+     "url": "/api/v3/goods/getDetail",
+     "body": "{\"goodsId\":1220}",
+     "note": "imgUrl 商品图 / goodsDescribe 简介 / goodsDetail 详情HTML / buyNotice 购买须知(弹窗) / rechargeTemplates 充值表单(弹窗字段)"
+    },
+    {
+     "name": "账户余额",
+     "url": "/api/v3/user/getAccount",
+     "body": "{}",
+     "note": "易变字段，按需现取"
+    }
+   ],
+   "form_field": "goodsType：1=卡密 / 3=直充"
+  },
+  {
+   "source": "商战",
+   "acct": 96810,
+   "host": "https://www.qqkami.com",
+   "proto": "开放 API / POST 表单 / customerid + sign / 证书链需 CERT_NONE",
+   "sign": "表单字段 sign（接口秘钥）",
+   "endpoints": [
+    {
+     "name": "全量商品列表",
+     "url": "/api.php/Client/goodsList",
+     "body": "customerid, sign",
+     "note": "限 300 秒 1 次；客户端有 _qqkami_catalog.json 本地缓存"
+    },
+    {
+     "name": "商品详情",
+     "url": "/api.php/Client/goodsInfo",
+     "body": "id, customerid, sign",
+     "note": "限 1 秒 1 次；img 商品图 / info 介绍HTML / notice 购买须知(弹窗) / template 充值表单(弹窗字段) / recharge_url"
+    },
+    {
+     "name": "批量指定商品",
+     "url": "/api.php/Client/designatedProductList",
+     "body": "id(逗号分隔)",
+     "note": "限 3 秒 1 次"
+    },
+    {
+     "name": "商家信息/余额",
+     "url": "/api.php/Client/getCustomerInfo",
+     "body": "customerid, sign",
+     "note": "易变字段，按需现取"
+    }
+   ],
+   "form_field": "type：1=卡密 / 2=直充"
+  },
+  {
+   "source": "思券",
+   "acct": 99569,
+   "host": "http://88.sqqy88.cn",
+   "proto": "CRMEB H5 (/front/diy/*) + uni-app (/uni/*) 双前端，各自独立签名",
+   "sign": "H5: md5(md5(md5(\"front\"+KEY)+ts))+ts ; uni: md5(md5(md5(\"h5\"+KEY)+ts))+ts",
+   "endpoints": [
+    {
+     "name": "商品列表(全量)",
+     "url": "/front/diy/goods/index",
+     "body": "{\"cid\":\"\",\"page\":1,\"limit\":20}",
+     "note": "cid 必须为空才是全量；limit 不起作用，一次返回全部"
+    },
+    {
+     "name": "分类树",
+     "url": "/front/diy/category/index",
+     "body": "{}",
+     "note": "—"
+    },
+    {
+     "name": "商品详情",
+     "url": "/uni/categoods",
+     "body": "{\"id\":\"1181\",\"sku_id\":\"\"}",
+     "note": "需 Authorization: Bearer <JWT>；goods_img/goods_imgs 图 / goods_info 介绍HTML / goods_notice 购买须知(弹窗) / attach 充值表单(弹窗字段) / recharge_url / demo_url"
+    },
+    {
+     "name": "实际券后价",
+     "url": "/uni/goods/get_goods_price",
+     "body": "{\"quantity\":1,\"goods_id\":1181}",
+     "note": "易变字段，按需现取"
+    }
+   ],
+   "form_field": "goods_type：1=卡密 / 2=虚拟(直充)"
+  }
+ ]
+}

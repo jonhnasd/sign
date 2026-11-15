@@ -5,6 +5,9 @@ created: 2026-11-04
 updated: 2026-11-04
 owner: 秋雨
 status: active
+execution: read_only
+verified_at: 2026-11-14
+review_by: 2027-02-14
 ---
 
 # 项目：sqqy88 商品抓取（列表 / 详情 / 增量监控）
