@@ -196,10 +196,33 @@ def check_vault():
 
 
 def check_python():
+    """版本 + 「该用哪个解释器」是否一致。
+
+    🔴 2026-11-15 加：原实现只报 sys.version_info，即「你运行 doctor 用的那个
+       python」。它永远绿 —— 因为报告的是当下碰巧是哪个，不是该用哪个。换机器时
+       真正会炸的是「实际跑批的解释器」与「体检的解释器」不是同一个。
+       现在显式对比 CFG.python（解析出来的确定路径）与 sys.executable。
+    """
     v = sys.version_info
-    ok = v >= (3, 10)
-    return Row("python", "Python 版本", ok, f"{v.major}.{v.minor}.{v.micro}",
-               "需 >= 3.10（用到 3.10+ 语法）", True)
+    ver_ok = v >= (3, 10)
+    ver = f"{v.major}.{v.minor}.{v.micro}"
+
+    try:
+        from paths import CFG
+        want = CFG.python
+    except Exception:
+        want = None
+    if not want:
+        # 解析不到不判红（换机器首跑时常见），但要明说，避免「以为配好了」
+        return Row("python", "Python 版本", ver_ok,
+                   f"{ver}（未解析到固定解释器，靠 PATH）",
+                   "建议设 DSH_PYTHON 指向确定路径", True)
+
+    same = Path(sys.executable).resolve() == Path(want).resolve()
+    note = "该用 = 在用" if same else f"⚠️ 在用 {sys.executable}，该用 {want}"
+    return Row("python", "Python 解释器", ver_ok and True,
+               f"{ver}｜{note}",
+               "不一致时建议用该路径重跑，或设 DSH_PYTHON", True)
 
 
 def check_location():

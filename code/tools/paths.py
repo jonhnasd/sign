@@ -38,6 +38,7 @@ ENV_CRED = "DSH_CREDENTIALS"
 ENV_WORKSPACE = "DSH_WORKSPACE"      # WorkBuddy 任务目录
 ENV_KUAIPAO = "DSH_KUAIPAO_GEN"
 ENV_BRIDGE = "DSH_BRIDGE_PORT"
+ENV_PYTHON = "DSH_PYTHON"            # 指定解释器（换机器时最容易错的一项）
 
 HERE = Path(__file__).resolve().parent          # .../edge-bridge/tools
 EDGE_BRIDGE = HERE.parent                        # .../edge-bridge
@@ -119,6 +120,23 @@ class Config:
                    Path.home() / "Desktop" / "workbuddy" / "文档提取" / "_yq_poster" / "kuaipao_gen.py"],
         )
 
+        # ── 解释器（2026-11-15 新增）──
+        # 为什么需要：doctor.py 原本只报 `sys.version_info`，即「你运行 doctor
+        # 用的那个 python」。换机器时这恰好是最容易错的一环 —— 报告的是「当下
+        # 碰巧是哪个」，不是「该用哪个」，所以它永远绿，问题留到真正跑批时才炸。
+        # 这里显式解析一个**确定的**解释器路径，让 doctor 能对比「该用」与「在用」。
+        self.python = self._pick(
+            "python", is_dir=False,
+            cands=[
+                os.environ.get(ENV_PYTHON),
+                # WorkBuddy 便携 python（本机既有安装）
+                Path.home() / ".workbuddy" / "binaries" / "python" / "versions" / "3.13.12" / "python.exe",
+                # DSH 自带运行时 python
+                Path.home() / ".dsh" / "dsh-runtimes" / "dsh-primary-runtime"
+                / "dependencies" / "python" / "python.exe",
+            ],
+        )
+
         # ── 桥接端口 ──
         try:
             self.bridge_port = int(os.environ.get(ENV_BRIDGE) or 8787)
@@ -174,7 +192,7 @@ class Config:
     def _env_of(name):
         return {"vault": ENV_VAULT, "sops_bin": ENV_SOPS, "age_key": ENV_AGE_KEY,
                 "credentials": ENV_CRED, "workspace": ENV_WORKSPACE,
-                "kuaipao_gen": ENV_KUAIPAO}.get(name, "")
+                "kuaipao_gen": ENV_KUAIPAO, "python": ENV_PYTHON}.get(name, "")
 
     # ── 便捷判断 ──
     @property
@@ -195,6 +213,7 @@ class Config:
             ("credentials", self.credentials, "加密凭据文件"),
             ("assets_dir", self.assets_dir, "货源素材目录"),
             ("kuaipao_gen", self.kuaipao_gen, "快跑生图脚本（可选）"),
+            ("python", self.python, "指定解释器（换机器关键项）"),
         ]
         out = []
         for name, val, desc in rows:
