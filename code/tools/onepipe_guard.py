@@ -342,7 +342,7 @@ CHECKS = [
     "⑤ 直充参数齐全", "⑥ 卡密参数为空", "⑦ 描述完善", "⑧ 标题合规",
     "⑨ 主图已重制", "⑨b 主图方案合规", "⑩ 价格库存正常", "⑪ 发货/改价配置",
     "⑫ 货源可售", "⑬ 无模板残留", "⑭ 限价不泄漏", "⑮ 买家文案无内部信息",
-    "⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛",
+    "⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛", "⑲ SKU 名带类型",
 ]
 
 # ⑨b 历史豁免（2026-11-14 建）：这些商品在「复刻式 + 生成记录」机制之前上架，
@@ -594,6 +594,23 @@ def postcheck(gid, spec=None, kind=None, verbose=True):
     except Exception as _e:
         for _n in ("⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛"):
             rows.append((_n, None, "判定不可用：%s" % str(_e)[:60]))
+
+    # ⑲ SKU 规格名写清类型（2026-11-15 用户定）
+    #    「sku要写清楚是什么类型，除了时长，会员类型货币类型等sku都要带上，让顾客一目了然」
+    #    判据：单维裸档位（`7天`/`1个月`）不合格；多维（会员:超级/时长:1天）天然合规。
+    try:
+        import sku_naming as _SKN
+        _badn, _okn, _unkn = _SKN.audit_item({"itemSkuList": skus})
+        if _badn:
+            _det = "；".join("sku%s ¥%s %s" % (b[0], b[1], b[2]) for b in _badn[:3])
+            rows.append(("⑲ SKU 名带类型", False, _det))
+        elif _unkn:
+            rows.append(("⑲ SKU 名带类型", None,
+                         "；".join(u[2] for u in _unkn[:2])))
+        else:
+            rows.append(("⑲ SKU 名带类型", True, "%d 档均已写清类型/币种" % _okn))
+    except Exception as _e:
+        rows.append(("⑲ SKU 名带类型", None, "判定不可用：%s" % str(_e)[:60]))
 
 
     missing = [n for n, ok_, _ in rows if ok_ is False]
