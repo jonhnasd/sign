@@ -1,91 +1,168 @@
 # -*- coding: utf-8 -*-
-"""省会城市 3 级行政区划编码表（国家统计局 GB/T 2260 标准码）。
+"""省会地区编码 —— 数据来自**闲鱼接口**，不是手写推算。
 
-结构：省 XX0000 / 省会市 XX0100 / 该市一个真实市辖区 XX01YY
-用途：新建宝贝时随机选一个省会城市作为商品所在地，避免全店同城。
+## 为什么改成接口取数
 
-🔴 区级码必须真实。实测服务端**不校验编码真实性**（任意 3 级都能写入），
-   所以这里写错不会被接口拦住，只会让买家看到不存在的地区 —— 必须人工保证正确。
+2026-11-15 用户要求「类目的接口你测试下」，顺带把地区接口也测通了：
+  `POST /api/GoodsManage/GetDivision`  → 985433 字符，34 省 / 394 市 / 2814 区
+  嵌套树结构：省.children = 市，市.children = 区
+
+**这推翻了我之前手写编码表的做法。** 手写时我把 `130304` 标成「保定市新市区」，
+接口显示真实是 **秦皇岛市北戴河区** —— 手写推断不可靠，必须用接口。
+
+## 本模块职责
+
+  ① 从接口拉全量区划树，缓存到本地 JSON（离线可用）
+  ② 只保留「省会城市」：省会 = 该省下 id 形如 `XX0100` 的市
+  ③ 随机选一个省会 + 该市一个真实存在的区，拼成 3 级 divisionIdList
+
+缓存文件：`_cn_divisions_cache.json`
 """
 
-# (省码, 省名, 市码, 市名, 区码, 区名)
-CAPITALS = [
-    ("110000", "北京市", "110100", "北京市", "110105", "朝阳区"),
-    ("120000", "天津市", "120100", "天津市", "120101", "和平区"),
-    ("130000", "河北省", "130100", "石家庄市", "130102", "长安区"),
-    ("140000", "山西省", "140100", "太原市", "140105", "小店区"),
-    ("150000", "内蒙古自治区", "150100", "呼和浩特市", "150102", "新城区"),
-    ("210000", "辽宁省", "210100", "沈阳市", "210102", "和平区"),
-    ("220000", "吉林省", "220100", "长春市", "220102", "南关区"),
-    ("230000", "黑龙江省", "230100", "哈尔滨市", "230102", "道里区"),
-    ("310000", "上海市", "310100", "上海市", "310101", "黄浦区"),
-    ("320000", "江苏省", "320100", "南京市", "320102", "玄武区"),
-    ("330000", "浙江省", "330100", "杭州市", "330102", "上城区"),
-    ("340000", "安徽省", "340100", "合肥市", "340102", "瑶海区"),
-    ("350000", "福建省", "350100", "福州市", "350102", "鼓楼区"),
-    ("360000", "江西省", "360100", "南昌市", "360102", "东湖区"),
-    ("370000", "山东省", "370100", "济南市", "370102", "历下区"),
-    ("410000", "河南省", "410100", "郑州市", "410102", "中原区"),
-    ("420000", "湖北省", "420100", "武汉市", "420102", "江岸区"),
-    ("430000", "湖南省", "430100", "长沙市", "430102", "芙蓉区"),
-    ("440000", "广东省", "440100", "广州市", "440103", "荔湾区"),
-    ("450000", "广西壮族自治区", "450100", "南宁市", "450102", "兴宁区"),
-    ("460000", "海南省", "460100", "海口市", "460105", "秀英区"),
-    ("500000", "重庆市", "500100", "重庆市", "500101", "万州区"),
-    ("510000", "四川省", "510100", "成都市", "510104", "锦江区"),
-    ("520000", "贵州省", "520100", "贵阳市", "520102", "南明区"),
-    ("530000", "云南省", "530100", "昆明市", "530102", "五华区"),
-    ("540000", "西藏自治区", "540100", "拉萨市", "540102", "城关区"),
-    ("610000", "陕西省", "610100", "西安市", "610102", "新城区"),
-    ("620000", "甘肃省", "620100", "兰州市", "620102", "城关区"),
-    ("630000", "青海省", "630100", "西宁市", "630102", "城东区"),
-    ("640000", "宁夏回族自治区", "640100", "银川市", "640102", "兴庆区"),
-    ("650000", "新疆维吾尔自治区", "650100", "乌鲁木齐市", "650102", "天山区"),
-]
+import json
+import os
+import random
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE = os.path.join(HERE, "_cn_divisions_cache.json")
+
+# 直辖市：省=市，直接取该市下的区
+MUNICIPALITIES = {"110000", "120000", "310000", "500000"}
 
 
-def all_divisions():
-    """返回 [(divisionIdList, 人类可读名)] 全表。"""
-    out = []
-    for t in CAPITALS:
-        prov, city, dist = t[1], t[3], t[5]
-        # 直辖市省=市名，避免「北京市北京市朝阳区」
-        label = ("%s%s" % (city, dist)) if prov == city else ("%s%s%s" % (prov, city, dist))
-        out.append(([t[0], t[2], t[4]], label))
+def _fetch_tree():
+    """从闲鱼接口拉全量区划树。"""
+    import agiso_direct as A
+    r = A._post("/api/GoodsManage/GetDivision", {})
+    d = (r or {}).get("data") or {}
+    tree = d.get("data")
+    if not isinstance(tree, list) or not tree:
+        raise RuntimeError("GetDivision 无数据: %s" % str(d)[:120])
+    return tree
+
+
+def _walk(nodes, depth=0, out=None):
+    """扁平化：[(node, depth)]。"""
+    if out is None:
+        out = []
+    for n in nodes or []:
+        out.append((n, depth))
+        _walk(n.get("children") or [], depth + 1, out)
     return out
 
 
-def pick(rng=None, avoid=None):
-    """随机选一个省会城市。avoid 是应尽量避开的 divisionId 列表。"""
-    import random as _r
-    r = rng or _r
-    pool = CAPITALS
+def refresh_cache(verbose=True):
+    """重新拉接口并写缓存。"""
+    tree = _fetch_tree()
+    json.dump(tree, open(CACHE, "w", encoding="utf-8"), ensure_ascii=False)
+    flat = _walk(tree)
+    if verbose:
+        print("  ✓ 已缓存 %d 省 / %d 节点 → %s"
+              % (len(tree), len(flat), os.path.basename(CACHE)))
+    return tree
+
+
+def load_tree(allow_fetch=True):
+    """读缓存；没有就拉接口。"""
+    if os.path.exists(CACHE):
+        try:
+            return json.load(open(CACHE, encoding="utf-8"))
+        except Exception:
+            pass
+    if not allow_fetch:
+        raise RuntimeError("无地区缓存且不允许联网")
+    return refresh_cache(verbose=False)
+
+
+def capitals(tree=None):
+    """返回全部省会候选 [(divisionIdList, 名称, 省名, 市名, 区名)]。
+
+    省会判据：省下 id 形如 `XX0100` 的市（国家码表里省会固定为 XX0100）。
+    直辖市：省码 == 市码（110000/110100），直接取该市下的区。
+    """
+    tree = tree if tree is not None else load_tree()
+    out = []
+    for prov in tree:
+        pid = str(prov.get("id") or "")
+        if not pid.endswith("0000"):
+            continue
+        pname = prov.get("shortName") or prov.get("name") or ""
+        cities = prov.get("children") or []
+        if not cities:
+            continue
+        # 选省会：优先 XX0100，直辖市取自身
+        cap = None
+        if pid in MUNICIPALITIES:
+            cap = cities[0] if cities else None
+        else:
+            for c in cities:
+                cid = str(c.get("id") or "")
+                if cid.endswith("0100") and cid[:2] == pid[:2]:
+                    cap = c
+                    break
+        if not cap:
+            continue
+        cid = str(cap.get("id") or "")
+        cname = cap.get("shortName") or cap.get("name") or ""
+        dists = [d for d in (cap.get("children") or []) if str(d.get("id") or "")]
+        if not dists:
+            continue
+        for d in dists:
+            did = str(d.get("id") or "")
+            if not did or did.endswith("00"):
+                continue
+            dname = d.get("shortName") or d.get("name") or ""
+            label = ("%s%s" % (cname, dname)) if pid in MUNICIPALITIES \
+                else ("%s %s %s" % (pname, cname, dname))
+            out.append(([pid, cid, did], label, pname, cname, dname))
+    return out
+
+
+def pick(rng=None, avoid=None, tree=None):
+    """随机选一个省会城市的真实区。
+
+    avoid: 要避开的 divisionId / divisionIdList 末位列表
+    """
+    r = rng or random
+    pool = capitals(tree)
+    if not pool:
+        raise RuntimeError("省会列表为空，检查地区缓存")
     if avoid:
         avoid_set = {str(a) for a in avoid}
-        filtered = [t for t in CAPITALS if t[4] not in avoid_set and t[2] not in avoid_set]
+        filtered = [x for x in pool if x[0][2] not in avoid_set and x[0][1] not in avoid_set]
         if filtered:
             pool = filtered
-    t = r.choice(pool)
-    label = ("%s%s" % (t[3], t[5])) if t[1] == t[3] else ("%s %s %s" % (t[1], t[3], t[5]))
+    dl, label, pname, cname, dname = r.choice(pool)
     return {
-        "divisionId": int(t[4]),
-        "divisionIdList": [t[0], t[2], t[4]],
+        "divisionId": int(dl[2]),
+        "divisionIdList": list(dl),
         "name": label,
-        "province": t[1], "city": t[3], "district": t[5],
+        "province": pname, "city": cname, "district": dname,
     }
 
 
+def all_divisions(tree=None):
+    """[(divisionIdList, 名称)] 全表（每省只取省会第一个区，用于展示）。"""
+    seen = {}
+    for dl, label, p, c, d in capitals(tree):
+        key = (dl[0], dl[1])
+        if key not in seen:
+            seen[key] = (dl, label)
+    return list(seen.values())
+
+
 if __name__ == "__main__":
-    print("=== 省会编码表 %d 个 ===" % len(CAPITALS))
-    for dl, name in all_divisions():
-        print("  %-32s %s" % ("/".join(dl), name))
+    print("=== 拉取/读取地区树 ===")
+    tree = load_tree()
+    print("  省级节点:", len(tree))
+    caps = capitals(tree)
+    print("  省会区级候选:", len(caps))
     print()
-    print("=== 随机抽取 5 次 ===")
+    print("=== 每省省会（首个区）===")
+    for dl, label in all_divisions(tree):
+        print("  %-30s %s" % ("/".join(dl), label))
+    print()
+    print("=== 随机抽 5 次 ===")
     for _ in range(5):
-        p = pick()
-        print("  %-38s %s" % ("/".join(p["divisionIdList"]), p["name"]))
-    print()
-    print("=== 避开河北保定后抽 3 次 ===")
-    for _ in range(3):
-        p = pick(avoid=["130304"])
-        print("  %-38s %s" % ("/".join(p["divisionIdList"]), p["name"]))
+        p = pick(tree=tree)
+        print("  %-32s %s" % ("/".join(p["divisionIdList"]), p["name"]))

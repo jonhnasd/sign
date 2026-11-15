@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
-"""省会地区编码表回归（cn_divisions.py）。
+"""省会地区模块回归（cn_divisions.py）。
 
-用户 2026-11-15 定：「新建宝贝的地区要随机选省会城市，不要只有一个城市」
+数据来源已从「手写编码表」改为「闲鱼 GetDivision 接口」：
+  POST /api/GoodsManage/GetDivision → 34 省 / 394 市 / 2814 区（嵌套树）
 
-这里锁死三件事：
-  ① 编码结构合法（3 级、省 XX0000、市 XX0100、区同省前缀）
-  ② 覆盖全部 31 个省级行政区，无重复
-  ③ 随机抽取确实会变，且能避开指定城市
+🔴 为什么要改：手写时我把 `130304` 标成「保定市新市区」，
+   接口显示真实是「秦皇岛市北戴河区」。手写推断不可靠。
+
+锁死：
+  ① 缓存存在且结构完整（省/市/区三级）
+  ② 省会判据正确（XX0100，直辖市取自身）
+  ③ 抽出的编码三级自洽（省 XX0000 / 市 XX0100 / 区同省同市前缀）
+  ④ 随机性 + 避开指定城市
+  ⑤ 已知编码的真实名称对得上（防止再次张冠李戴）
 """
 import sys
 
@@ -29,60 +35,77 @@ def ck(name, got, want):
         print("  ✗ %s   got=%r want=%r" % (name, got, want))
 
 
-print("=== ① 编码结构合法 ===")
+print("=== ① 地区树 ===")
+tree = C.load_tree()
+ck("省级节点数 >= 31", len(tree) >= 31, True)
+flat = C._walk(tree)
+ck("总节点数 > 2000", len(flat) > 2000, True)
+
+print("\n=== ② 省会候选 ===")
+caps = C.capitals(tree)
+ck("省会区级候选 > 300", len(caps) > 300, True)
+provs = {x[0][0] for x in caps}
+ck("覆盖省级行政区 >= 31", len(provs) >= 31, True)
+
+print("\n=== ③ 抽出的编码三级自洽 ===")
+# 🔴 编码规律说明：市辖区第三段通常是 01~20，但**县/自治县不遵守**
+#    （重庆 500238=巫溪县、500230=丰都县，第三段是 38/30）。
+#    所以只校验「省 XX0000 / 市 XX0100 / 前两位一致 / 有第三段」，
+#    不校验「区码第 3-4 位 == 市码第 3-4 位」—— 那会误判合法县份。
 struct_bad = []
-for prov, pname, city, cname, dist, dname in C.CAPITALS:
-    errs = []
-    if not (len(prov) == 6 and len(city) == 6 and len(dist) == 6):
-        errs.append("长度非6")
-    if not prov.endswith("0000"):
-        errs.append("省码非XX0000")
-    if not city.endswith("0100"):
-        errs.append("市码非XX0100（省会规律）")
-    if city[:2] != prov[:2] or dist[:2] != prov[:2]:
-        errs.append("省市县前缀不一致")
-    if dist[2:4] != city[2:4]:
-        errs.append("区码前4位与市码不符")
-    if dist[4:] == "00":
-        errs.append("区码缺区级")
-    if errs:
-        struct_bad.append("%s(%s): %s" % (pname, "/".join([prov, city, dist]), "、".join(errs)))
-ck("31 条全部结构合法", struct_bad, [])
-
-print("\n=== ② 覆盖 31 省，无重复 ===")
-ck("条目数 = 31", len(C.CAPITALS), 31)
-provs = [t[0] for t in C.CAPITALS]
-ck("省级码无重复", len(set(provs)), len(provs))
-dists = [t[4] for t in C.CAPITALS]
-ck("区级码无重复", len(set(dists)), len(dists))
-
-print("\n=== ③ 随机性 ===")
-picks = set()
 for _ in range(200):
-    p = C.pick()
-    picks.add(tuple(p["divisionIdList"]))
-ck("200 次抽取覆盖 >10 个城市", len(picks) > 10, True)
+    p = C.pick(tree=tree)
+    dl = p["divisionIdList"]
+    if len(dl) != 3:
+        struct_bad.append("长度非3: %s" % dl)
+        continue
+    if not dl[0].endswith("0000"):
+        struct_bad.append("省码非XX0000: %s" % dl)
+    if not dl[1].endswith("0100"):
+        struct_bad.append("市码非XX0100: %s" % dl)
+    if dl[0][:2] != dl[1][:2] or dl[0][:2] != dl[2][:2]:
+        struct_bad.append("三级前缀不一致: %s" % dl)
+    if dl[2][4:] == "00":
+        struct_bad.append("区码缺区级: %s" % dl)
+    if dl[2] == dl[1]:
+        struct_bad.append("区码等于市码: %s" % dl)
+ck("200 次抽取全部结构合法", struct_bad[:3], [])
 
-print("\n=== ④ 避开指定城市 ===")
+print("\n=== ④ 随机性 + 避开 ===")
+picks = {tuple(C.pick(tree=tree)["divisionIdList"]) for _ in range(200)}
+ck("200 次覆盖 > 20 个不同区", len(picks) > 20, True)
 for _ in range(30):
-    p = C.pick(avoid=["130304"])
+    p = C.pick(avoid=["130304"], tree=tree)
     if "130304" in p["divisionIdList"]:
-        bad.append("avoid 失效：抽到了 130304")
+        bad.append("avoid 失效：抽到 130304")
         break
 else:
     ok_n += 1
-    print("  ✓ 避开 130304 生效（30 次均未命中）")
+    print("  ✓ 避开 130304 生效")
 
-print("\n=== ⑤ pick 返回结构完整 ===")
-p = C.pick()
-ck("有 divisionId", isinstance(p.get("divisionId"), int), True)
-ck("divisionIdList 3 级", len(p.get("divisionIdList") or []), 3)
+print("\n=== ⑤ 已知编码名称对得上（防张冠李戴）===")
+idx = {}
+
+
+def _index(nodes):
+    for n in nodes:
+        idx[str(n.get("id"))] = n.get("shortName") or n.get("name")
+        _index(n.get("children") or [])
+
+
+_index(tree)
+ck("130304 = 北戴河区（不是保定）", idx.get("130304"), "北戴河区")
+ck("130300 = 秦皇岛市", idx.get("130300"), "秦皇岛市")
+ck("130100 = 石家庄市", idx.get("130100"), "石家庄市")
+ck("310115 = 浦东新区", idx.get("310115"), "浦东新区")
+ck("610102 = 新城区", idx.get("610102"), "新城区")
+
+print("\n=== ⑥ pick 返回结构 ===")
+p = C.pick(tree=tree)
+ck("divisionId 是 int", isinstance(p.get("divisionId"), int), True)
 ck("divisionId == 列表末位", p["divisionId"], int(p["divisionIdList"][2]))
 ck("有可读名", bool(p.get("name")), True)
-
-print("\n=== ⑥ 展示名不重复省市（直辖市）===")
-names = [n for _, n in C.all_divisions()]
-ck("无「北京市北京市」式重复", [n for n in names if n.count("市") > 1 and "区" not in n], [])
+ck("省市区字段齐全", all(p.get(k) for k in ("province", "city", "district")), True)
 
 print()
 if bad:
@@ -90,4 +113,4 @@ if bad:
     for b in bad:
         print("   ", b)
     sys.exit(1)
-print("=== 通过 %d / %d ✅ 省会地区表已锁死 ===" % (ok_n, ok_n))
+print("=== 通过 %d / %d ✅ 省会地区（接口数据）已锁死 ===" % (ok_n, ok_n))

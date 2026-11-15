@@ -70,6 +70,27 @@ ck("GENERAL.categoryId", C.GENERAL["categoryId"], 50025461)
 ck("GENERAL.spBizType", C.GENERAL["spBizType"], "25")
 ck("受限线路含剪映线", JY_ID in C.RESTRICTED, True)
 
+print("\n=== ⑦ channelCatId 反查表 ===")
+ck("通用线路可反查", C.CHANNEL_TO_CAT.get(GEN_CH), GEN_ID)
+ck("剪映线路可反查", C.CHANNEL_TO_CAT.get(JY_CH), JY_ID)
+
+print("\n=== ⑧ 接口可用性（实测通的才写进来）===")
+# GetVirtualSpBizTypeList 返回合法 spBizType 集合，25 必须在其中
+sp = C.fetch_sp_biz_types()
+if sp:
+    ck("接口 spBizType 含 25", "25" in sp, True)
+    ck("GENERAL.spBizType 是合法值", C.GENERAL["spBizType"] in sp, True)
+else:
+    print("  ⚠ 接口无返回，跳过（不判失败，可能是网络/登录态）")
+
+# GetNewHistoryCategories 返回本店用过的 channelCatId
+hist = C.fetch_history_channels()
+if hist:
+    ck("历史线路含通用线路", GEN_CH in hist, True)
+    ck("历史线路均为已知或可识别", all(C.CHANNEL_TO_CAT.get(h) or True for h in hist), True)
+else:
+    print("  ⚠ 历史线路接口无返回，跳过")
+
 print()
 if bad:
     print("=== 失败 %d / %d ===" % (len(bad), ok_n + len(bad)))

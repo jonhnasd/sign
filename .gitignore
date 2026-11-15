@@ -31,3 +31,6 @@ secrets/*.yaml
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# 地区区划树缓存（1.1MB，由 GetDivision 接口再生，不入库）
+_cn_divisions_cache.json
