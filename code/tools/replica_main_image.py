@@ -931,7 +931,15 @@ def _self_test(args):
     label = str(args.account_label or "").strip()
     if not label and info.get("form") != "卡密" and info.get("buyer_kind") in ("标识", "平台账号"):
         label = info.get("buyer_field") or ""
-    prompt = build_prompt(name, skus, label, args.brand)
+    prompt = build_prompt(name, skus, label, args.brand, getattr(args, "sku_mode", "highest"))
+
+    # 🔴 多档却选 highest → 提示词会自相矛盾（胶囊列多档 + 正文说「仅展示最高档位」）。
+    #    规则里「单位混杂必须退回全档」是 deploy._copy_title 的行为，主图要对齐：
+    #    这里不擅自改用户选择，但必须显式警告，避免出图后发现图文不符。
+    if len(skus) > 1 and getattr(args, "sku_mode", "highest") == "highest":
+        print("⚠️ 警告：--sku 给了 %d 档，但 --sku-mode=highest —— 提示词会同时出现"
+              "「胶囊：%s」与「仅展示最高档位」，模型可能只画一档或画错。" % (len(skus), "/".join(skus)))
+        print("   单位混杂（如 7天+1个月）无法比较高低，按规则应显式传 --sku-mode all。")
 
     print("参考图来源:", src, "| pno =", args.pno)
     print("素材命中:", info["found"], "| 商品名:", info["name"])
@@ -982,6 +990,13 @@ def main():
     ap.add_argument("--account-label", default="")
     ap.add_argument("--brand", default="")
     ap.add_argument("--fetch-ref", action="store_true", help="同时把货源商品图下载到本目录")
+    # 🔴 2026-11-15 补：build_prompt 一直支持 sku_display_mode，但命令行没暴露，
+    #    导致多档商品永远按默认 highest 生成 → 提示词自相矛盾
+    #    （胶囊写「7天/1个月」，同句又写「仅展示最高档位」）。
+    #    规则要求「显式 --main-image-sku-mode all 才铺全档」，故必须可传。
+    ap.add_argument("--sku-mode", default="highest", choices=list(SKU_DISPLAY_MODES),
+                    help="主图档位展示模式：highest=最高档(默认) / all=全部在售档 / highest_month=仅月档。"
+                         "单位混杂（如 7天+1个月）无法比较时必须显式选 all")
     args = ap.parse_args()
 
     if args.record_self_supplied:

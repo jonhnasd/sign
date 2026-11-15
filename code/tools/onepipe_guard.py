@@ -250,6 +250,55 @@ def preflight(spec, item, acct, kind, mode="--dry"):
         if checked == 0:
             warn.append("类型闸：未能从货源接口核实 productType（网络或目录问题），本次跳过交叉校验，请人工确认 kind")
 
+    # ①b 永远不上代充（2026-11-15 用户定）—— 接口 productType 区分不出来，只能靠标题。
+    #     代充也是 productType=1，若只看类型闸会放行；必须在写入前独立拦一道。
+    #     🔴 这里用「显式重试 + 失败即 fatal」，不用 try/except 静默跳过：
+    #        2026-11-15 首版写成 except → warn，而 warn 在 --go 下不打印，
+    #        结果代充 pno=15301 漏过闸且毫无提示。安全闸绝不允许静默失效。
+    try:
+        import sourcing as _SRC
+    except Exception as _e:
+        _SRC = None
+        fatal.append("代充闸不可用（无法导入 sourcing：%s）—— 安全闸失效时禁止上架，请修好再跑。" % str(_e)[:80])
+    if _SRC is not None:
+        _dc = []
+        for pno in spec_pnos(spec):
+            a = acct
+            for _s in (spec.get("skus") or []):
+                if str(_s.get("pno")) == str(pno) and _s.get("acct"):
+                    a = _s.get("acct")
+            _t = ""
+            try:
+                import alds_dict as _D
+                _t = (_D.detail(pno, a) or {}).get("name") or ""
+            except Exception:
+                _t = ""
+            bad, word = _SRC.is_daichong({"productTitle": _t})
+            if bad:
+                _dc.append("pno=%s「%s」含「%s」" % (pno, str(_t)[:28], word))
+            elif not _t:
+                # 拿不到标题就无法证明不是代充 → 不放行（安全闸默认拒绝）
+                fatal.append("代充闸：pno=%s（acct=%s）取不到货源标题，无法证明非代充 → 拒绝上架。"
+                             "请检查货源目录后重跑。" % (pno, a))
+        if _dc:
+            fatal.append("代充货源禁止上架（2026-11-15 用户定「永远不上代充」）："
+                         + "；".join(_dc) + "。请换官方直充或卡密货源。")
+
+    # ①c 直充/卡密不得混装（2026-11-15 用户定）
+    try:
+        import sourcing as _SRC2
+        _pts = []
+        for pno in spec_pnos(spec):
+            pt = supplier_type(acct, pno)
+            if pt is not None:
+                _pts.append(int(pt))
+        _ok, _why = _SRC2.kind_uniform_violations(_pts)
+        if _ok is False:
+            fatal.append("类型混装禁止（2026-11-15 用户定「直充必须和直充一起上，"
+                         "不能与卡密类的一起上」）：%s。请把 SKU 拆成纯直充或纯卡密两件商品。" % _why)
+    except Exception as _e:
+        fatal.append("混装闸不可用（%s）—— 安全闸失效时禁止上架。" % str(_e)[:80])
+
     # ② 文案闸：spec 没给 title/desc 且线上描述是默认句/过短 → ⑪ 会静默跳过
     desc = str(item.get("desc") or item.get("description") or "")
     has_spec_copy = bool(spec.get("title") or spec.get("desc"))
@@ -293,6 +342,7 @@ CHECKS = [
     "⑤ 直充参数齐全", "⑥ 卡密参数为空", "⑦ 描述完善", "⑧ 标题合规",
     "⑨ 主图已重制", "⑨b 主图方案合规", "⑩ 价格库存正常", "⑪ 发货/改价配置",
     "⑫ 货源可售", "⑬ 无模板残留", "⑭ 限价不泄漏", "⑮ 买家文案无内部信息",
+    "⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛",
 ]
 
 # ⑨b 历史豁免（2026-11-14 建）：这些商品在「复刻式 + 生成记录」机制之前上架，
@@ -487,6 +537,65 @@ def postcheck(gid, spec=None, kind=None, verbose=True):
                 leak.append("attach(sku%s)" % c.get("skuId"))
     rows.append(("⑭ 限价不泄漏", not leak, "泄漏=" + "、".join(leak) if leak else "干净"))
 
+    # ⑯/⑰/⑱ 选源四条规则复核（2026-11-15 用户定）
+    # 这三项独立于执行路径：即使有人手工在网页上配了违规货源，巡检也能抓出来。
+    try:
+        import sourcing as _SR
+        # ⑯ 代充（永远不上）
+        _dcs = []
+        for c in cfgs:
+            _pno = c.get("supplierProductNo")
+            if not _pno:
+                continue
+            _nm = ""
+            try:
+                _nm = (D.detail(_pno, c.get("supplierAccountId") or acct) or {}).get("name") or ""
+            except Exception:
+                _nm = ""
+            bad, word = _SR.is_daichong({"productTitle": _nm})
+            if bad:
+                _dcs.append("sku%s←pno=%s 含「%s」" % (c.get("skuId"), _pno, word))
+        rows.append(("⑯ 无代充货源", not _dcs,
+                     "；".join(_dcs[:3]) if _dcs else "干净（2026-11-15 铁律：永远不上代充）"))
+
+        # ⑰ 类型不混装
+        _tps = []
+        for c in cfgs:
+            _p = c.get("supplierProductNo")
+            if not _p:
+                continue
+            _t = c.get("productType")
+            if _t is None:
+                try:
+                    _t = D.supplier_type(c.get("supplierAccountId") or acct, _p)
+                except Exception:
+                    _t = None
+            if _t is not None:
+                _tps.append(int(_t))
+        _uok, _uwhy = _SR.kind_uniform_violations(_tps)
+        rows.append(("⑰ 类型不混装", _uok, _uwhy))
+
+        # ⑱ 无余额门槛
+        _lbs = []
+        for c in cfgs:
+            _p = c.get("supplierProductNo")
+            if not _p:
+                continue
+            _d = {}
+            try:
+                _d = D.detail(_p, c.get("supplierAccountId") or acct) or {}
+            except Exception:
+                _d = {}
+            blk, lb = _SR.balance_blocked(_d)
+            if blk:
+                _lbs.append("sku%s←pno=%s 门槛≥%.0f" % (c.get("skuId"), _p, lb))
+        rows.append(("⑱ 无余额门槛", not _lbs,
+                     "；".join(_lbs[:3]) if _lbs else "干净"))
+    except Exception as _e:
+        for _n in ("⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛"):
+            rows.append((_n, None, "判定不可用：%s" % str(_e)[:60]))
+
+
     missing = [n for n, ok_, _ in rows if ok_ is False]
     if verbose:
         print("\n  ── 一条龙完成清单（%s）──" % gid)
@@ -500,25 +609,109 @@ def postcheck(gid, spec=None, kind=None, verbose=True):
     return rows, missing
 
 
+def _looks_like_gid(s):
+    return bool(re.fullmatch(r"\d{8,20}", str(s or "").strip()))
+
+
+def parse_targets(args):
+    """从命令行解析目标 gid 列表。返回 (gids, problems)。
+
+    支持三种等价写法：
+      --inspect <gid>                     位置参数
+      --inspect --gid <gid>               显式开关
+      --inspect --gid <a> --gid <b>       多个
+      也接受 bare `python onepipe_guard.py <gid>`
+
+    🔴 2026-11-15 修：此前 `--inspect <gid>` 的位置参数被**静默丢弃** ——
+       只要 args 里没有 `--gid` 就一直走 inspect_all()，去读
+       _live_gids_fresh.json 里硬编码的旧 9 个商品。结果查 A 商品拿到 B 商品
+       的报告，而且没有任何提示。巡检工具谎报比没有工具更危险，故显式解析、
+       非法参数一律报错而不是忽略。
+    """
+    gids, problems = [], []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--gid":
+            if i + 1 >= len(args) or args[i + 1].startswith("-"):
+                problems.append("--gid 后面缺少商品 ID")
+                i += 1
+            else:
+                gids.append(args[i + 1])
+                i += 2
+            continue
+        if a.startswith("--gid="):
+            gids.append(a.split("=", 1)[1])
+            i += 1
+            continue
+        if a.startswith("-"):
+            i += 1          # 其他开关（--inspect / --self-test …）不参与
+            continue
+        if _looks_like_gid(a):
+            gids.append(a)
+        else:
+            problems.append("无法识别的参数 %r（商品 ID 应为 8~20 位数字）" % a)
+        i += 1
+
+    seen, out = set(), []
+    for g in gids:
+        g = str(g).strip()
+        if g and g not in seen:
+            seen.add(g)
+            out.append(g)
+    return out, problems
+
+
 def inspect_all(gid=None):
+    """只读巡检。gid 可为 str / list / None(None=读全量清单)。
+
+    返回进程退出码：0=全通过，1=有缺项或商品取不到，2=环境/清单问题。
+    """
     A = _A()
     A.TOKEN = A.token_from_browser(open_if_missing=False)
-    if gid:
+    if isinstance(gid, (list, tuple)):
+        ids = [str(x) for x in gid]
+    elif gid:
         ids = [str(gid)]
     else:
         p = os.path.join(HERE, "_live_gids_fresh.json")
         if not os.path.exists(p):
-            print("缺 _live_gids_fresh.json，请先跑 grab_live_gids.py；或用 --gid 指定商品")
-            return
+            print("缺 _live_gids_fresh.json，请先跑 grab_live_gids.py；"
+                  "或直接指定商品：python onepipe_guard.py --inspect <gid>")
+            return 2
         ids = json.load(open(p, encoding="utf-8"))
-    print("只读巡检 %d 个在售商品（不修改任何线上数据）\n" % len(ids))
-    total = {}
+        print("（未指定商品 → 读 _live_gids_fresh.json 的 %d 个在售商品）" % len(ids))
+
+    print("只读巡检 %d 个商品（不修改任何线上数据）\n" % len(ids))
+    total, bad_ids = {}, []
     for g in ids:
+        # 🔴 先验 ID 真实存在：item_of 取不到会静默返回 {}，不校验就会
+        #    跑出一堆红项却分不清是商品有问题还是 ID 写错了。
+        it = {}
+        try:
+            it = item_of(g, A)
+        except Exception as e:
+            print("❌ 商品 %s 取不到：%s" % (g, str(e)[:80]))
+            bad_ids.append(g)
+            continue
+        if not it or (not it.get("title") and not it.get("itemSkuList")):
+            print("❌ 商品 %s 不存在或无权限（检查 ID 是否写错）" % g)
+            bad_ids.append(g)
+            continue
         rows, missing = postcheck(g, verbose=True)
         total[g] = missing
+
     print("\n=== 汇总 ===")
     for g, m in total.items():
         print("  %s  %s" % (g, "✅ 全通过" if not m else "❌ 缺 %d 项：%s" % (len(m), "、".join(m))))
+    for g in bad_ids:
+        print("  %s  ❌ 商品取不到（ID 错误或无权限）" % g)
+    if len(total) + len(bad_ids) > 1:
+        clean = sum(1 for m in total.values() if not m)
+        print("\n  %d/%d 全通过%s"
+              % (clean, len(total) + len(bad_ids),
+                 "" if not bad_ids else "，%d 个 ID 无效" % len(bad_ids)))
+    return 0 if (not bad_ids and all(not m for m in total.values())) else 1
 
 
 if __name__ == "__main__":
@@ -527,8 +720,16 @@ if __name__ == "__main__":
         print("清单一共 %d 项：" % len(CHECKS))
         for c in CHECKS:
             print("  -", c)
-        print("\n示例：python onepipe_guard.py --inspect --gid 1099583129794")
-    elif "--gid" in args:
-        inspect_all(args[args.index("--gid") + 1])
+        print("\n示例：python onepipe_guard.py --inspect 1099583129794")
+        print("      python onepipe_guard.py --inspect --gid <gid>")
+        print("      python onepipe_guard.py --inspect            # 全店在售")
     else:
-        inspect_all()
+        gids, problems = parse_targets(args)
+        for p in problems:
+            print("⚠️ " + p)
+        if problems and not gids:
+            print("\n用法：python onepipe_guard.py --inspect [<gid> ...] [--gid <gid> ...]")
+            sys.exit(2)
+        if gids or "--inspect" in args:
+            sys.exit(inspect_all(gids or None))
+        print(__doc__)
