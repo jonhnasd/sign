@@ -16,6 +16,8 @@ secrets/*.yaml
 *.dec
 *.tmp
 *.bak
+*.bak_*
+*.bak.*
 .cache/
 .tmp/
 

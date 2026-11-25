@@ -667,6 +667,31 @@ python read_goofish_item.py 1084793623900            # ⑨ 闲鱼端验收 ✅
 
 > 遗留隐患：`1092321211319`「3200积分一天svip」售 6.58 但**无货源配置**，成本未知、下单可能发不出货，需单独处理。
 
+## 十六、⭐ SKU 规格图（propertyImages）—— 可选，默认不做（2026-11-24 实测）
+
+> **一句话**：阿奇索 SKU 图片**不是** `itemSkuList` 字段，而是**商品级** `propertyImages`（闲鱼「销售属性图片」），提交后闲鱼端每个 SKU 显示为 `itemDO.skuList[i].propertyImage.url`。已接入一条龙为**可选开关**，**默认不做**（用户 2026-11-24 定）。
+
+### 触发规则（默认不做）
+- `deploy.py` ⑮ `phase_sku_images`：**仅 `spec.sku_images` 非空才执行**；spec 无该字段 = 跳过（不碰图）。
+- `create_from_pno.py` `--sku-images`：新建流程显式传参才写进 spec；未传 = 不加。
+- `sku_images` 元素：`{"value":"周卡","path":"C:/a.png"}`（本地图自动上传）或 `{"value":"周卡","url":"...","imageId":"...","ossKey":"..."}`（已有元数据直接用）。
+
+### 方法（三步，MediaUpload 已实测）
+1. **上传**：`POST /api/GoodsManage/MediaUpload`（multipart 字段 `files`，headers `x_front:1` + `Authorization: Bearer TOKEN`，PNG ≤10M，比例 4:3/1:1/3:4；极小图会报「媒体上传失败」）→ `data.data = {imageId, agisoImgUrl, ossKey}`
+2. **构造 `propertyImages`**：`[{propertyText, valueText, imageId, ossKey, url}]`，按「规格维度名 + 规格值」配对（单维度=每档一张；双维度=各维度各值一张，**非**笛卡尔积）
+3. **提交**：`GetItemInfo` 读全量 → 改 `payload.propertyImages` → `Edit` 整份提交（整份提交，先读后改）
+
+实现：`alds_kit/media.py::upload_media_detail`、`alds_kit/item.py::set_sku_images`、`deploy.py::phase_sku_images`、`create_from_pno.py::_parse_sku_images`。
+
+### 🔴 硬限制：后端「只增不删」
+实测（2026-11-24，商品 `1100813876979` 知乎盐选）：提交 `propertyImages=[]` / `null` / `{}` / `url:''` **都清不掉**已加的规格图（回读仍显示旧图，闲鱼端 `skuList[i].propertyImage.url` 仍有值）。前端 `_goodsRelease.js` 里也无删除接口。→ **加图前务必确认**：加错/换图只能覆盖、**不能移除**；规格图是持久设置，**别拿在售商品试**。
+
+### 验证
+- 回读 `GetItemInfo.propertyImages`（后端已转存闲鱼 CDN `img.alicdn.com`，jpg）
+- 或抓闲鱼端 `itemDO.skuList[i].propertyImage.url`（出现即生效，无则没加成功）
+
+> 📌 残留（用户 2026-11-24 拍板保留）：`1100813876979` 知乎盐选 **14天** 档带一张测试规格图（`O1CN014poeMumPeQK24uCu_...-fleamarket.jpg`），接口清不掉，保留现状。
+
 ## 🔗 相关
 - [[操作-阿奇索上品一条龙]] —— **流程层权威源**（上品工作流 / deploy 一条龙 / **§二 上SKU 快捷短语** / 双闸 / 命名 / 文案 / 改价 / 周期 / 双维度），2026-11-04 整合自 WorkBuddy、2026-11-10 模板合并为一份
 - [[项目-edge-bridge]] —— 用于自动化操作的后台桥接

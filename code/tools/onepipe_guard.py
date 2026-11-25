@@ -32,7 +32,10 @@ import os
 import re
 import sys
 
-sys.stdout.reconfigure(encoding="utf-8")
+# 模块级 UTF-8 重定向：被测试 import 时 stdout 可能已被替换成 StringIO（mutate_check 会这么做），
+# 那种对象没有 reconfigure → 直接 AttributeError 会让「未变异基线」也失败，误判成漏报。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -77,6 +80,36 @@ def item_of(gid, A=None):
     r = A.get_item(str(gid))
     d = (r or {}).get("data") or {}
     return d.get("data") or d
+
+
+def ship_polish_ok(auto_send, auto_polish, sold_auto):
+    """⑪ 判据（纯函数，供 golden 离线回归）：发货登记 + 自动擦亮 + 售完自动上架 三者全 True。
+
+    🔴 为什么擦亮也算一条龙必过项：擦亮只在 SaveGoodsSetting（phase_online）里开，
+       id 流程商品本来就在线，容易只跑 build/alds/copy/主图/改价而漏掉 phase_online，
+       结果商品在线、清单全绿，但自动擦亮没开（1101707032851 实证，2026-11-16）。
+       读不到状态（None）按红处理：无法核实就不算完成。
+    """
+    return bool(auto_send) and auto_polish is True and sold_auto is True
+
+
+def _polish_state(gid):
+    """读线上 autoPolish / soldAutoPublish（StateGoodsSetting 落在 SearchGoodsList 的 setting 里）。
+
+    返回 (autoPolish, soldAutoPublish)，读不到返回 (None, None) —— 调用方按「无法核实」判红前一档处理。
+    """
+    try:
+        r = _A().search_goods("", 1, 100) or {}
+        d = (r.get("data") or {})
+        d = d.get("data") or d
+        items = d.get("items") or d.get("list") or []
+        for x in items:
+            if str(x.get("goodsId")) == str(gid):
+                s = x.get("setting") or {}
+                return s.get("autoPolish"), s.get("soldAutoPublish")
+    except Exception:
+        pass
+    return None, None
 
 
 def deep_cfg(r):
@@ -340,7 +373,7 @@ def preflight(spec, item, acct, kind, mode="--dry"):
 CHECKS = [
     "① 商品在线", "② SKU 已建", "③ 每档绑货源", "④ 类型与货源一致",
     "⑤ 直充参数齐全", "⑥ 卡密参数为空", "⑦ 描述完善", "⑧ 标题合规",
-    "⑨ 主图已重制", "⑨b 主图方案合规", "⑩ 价格库存正常", "⑪ 发货/改价配置",
+    "⑨ 主图已重制", "⑨b 主图方案合规", "⑩ 价格库存正常", "⑪ 发货/改价+擦亮",
     "⑫ 货源可售", "⑬ 无模板残留", "⑭ 限价不泄漏", "⑮ 买家文案无内部信息",
     "⑯ 无代充货源", "⑰ 类型不混装", "⑱ 无余额门槛", "⑲ SKU 名带类型",
 ]
@@ -484,13 +517,20 @@ def postcheck(gid, spec=None, kind=None, verbose=True):
     rows.append(("⑩ 价格库存正常", p_ok,
                  "%d 档，最低 ¥%s" % (len(skus), min([float(s.get("price") or 0) for s in skus] or [0]))))
 
-    # ⑪ 发货/改价
+    # ⑪ 发货/改价 + 擦亮（2026-11-16 加擦亮）
+    # 🔴 为什么必须查 autoPolish：擦亮写在 SaveGoodsSetting，只在 phase_online 里调；
+    #    id 流程商品本来就在线，容易只跑 build/alds/copy/主图/改价而**漏掉 phase_online**，
+    #    结果是商品在线、20 项全绿，但自动擦亮没开（1101707032851 实证）。
     try:
         g = deep_cfg(A.get_goods_alds(str(gid))) or {}
         ship = bool(g.get("autoSend"))
-        rows.append(("⑪ 发货/改价配置", ship, "autoSend=%s spType=%s" % (ship, g.get("spType"))))
+        polish, sold_auto = _polish_state(gid)
+        ok = ship_polish_ok(ship, polish, sold_auto)
+        rows.append(("⑪ 发货/改价+擦亮", ok,
+                     "autoSend=%s spType=%s / autoPolish=%s soldAutoPublish=%s" % (
+                         ship, g.get("spType"), polish, sold_auto)))
     except Exception as e:
-        rows.append(("⑪ 发货/改价配置", None, "读取失败 %s" % str(e)[:40]))
+        rows.append(("⑪ 发货/改价+擦亮", None, "读取失败 %s" % str(e)[:40]))
 
     # ⑫ 货源可售（2026-11-13 加）：每档 isAllowPurchase；停售=红（对应库存须置 0）。
     #    取不到状态=未知 → ⚠️ 不判红（保守不阻断，与 supplier_allowed 口径一致）。

@@ -144,6 +144,11 @@ def main():
     for p in glob.glob(os.path.join(VAULT, "*.md")) + glob.glob(os.path.join(VAULT, "*", "*.md")):
         s = read(p)
         base = os.path.basename(p)
+        # 🔴 2026-11-25：自动生成的「最近变更.md」把 .py/.json/.txt 等**非笔记文件**也写成
+        #    [[双链]]（gen-changelog.sh 的「按文件统计」表），这些永远不可能是笔记 →
+        #    判成断链是误报。与 frontmatter 检查同理由（line 215）跳过。
+        if base == "最近变更.md":
+            continue
         for m in re.findall(r"\[\[([^\]|]+)", s):
             t = m.strip()
             if not t or t.startswith("http") or t == "创建链接":

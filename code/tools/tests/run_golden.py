@@ -301,6 +301,14 @@ def run_invariants(D, R):
     once = strip_time_promise('当天发货 极速处理 客服在线')[0]
     _ok(strip_time_promise(once)[0] == once, '文案清洗幂等')
 
+    # F6 ⑪ 擦亮判据：漏开自动擦亮必须判红（id 流程漏 phase_online 实证 1101707032851）
+    import onepipe_guard as G
+    _ok(G.ship_polish_ok(True, True, True), '⑪ 发货+擦亮+售完上架全开=通过')
+    _ok(not G.ship_polish_ok(True, False, False), '⑪ 漏开自动擦亮必须判红（核心不变量）')
+    _ok(not G.ship_polish_ok(True, True, False), '⑪ 漏开售完自动上架必须判红')
+    _ok(not G.ship_polish_ok(True, None, None), '⑪ 擦亮状态读不到必须判红（不按未知放过）')
+    _ok(not G.ship_polish_ok(False, True, True), '⑪ 未登记发货必须判红')
+
 
 # ---------------------------------------------------------------- 主流程
 def main():

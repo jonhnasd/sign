@@ -79,6 +79,8 @@ python doctor.py --fix-env # 打印要设哪些环境变量
 | 一条龙主流程（14 环节） | `操作-阿奇索上品一条龙.md` |
 | **已上架商品只改一处**（标题/主图/价格） | `操作-阿奇索单阶段重入调用.md` |
 | 库怎么维护、规则怎么登记 | `规则-知识库元约束.md` |
+| **易店商品标题 / 描述文案怎么写**（共享号 / 链接直充） | `项目-易店共享号与链接直充文案库.md`（形态判据 + 10 条标题模板 + 2 套正文骨架 + 易店字段映射 + 3 个对标样本实测数据） |
+| **抓闲鱼对标**（同行标题/描述/档位/浏览想要率） | `xyh_resolve_and_dump.py`（短链→卖家全店）/ `xyh_dump_items.py`（按 itemId）；抄之前先读文案库 §六「哪些不能抄」 |
 | 全库索引 | `长期记忆.md` |
 
 🔴 **`deploy.py --go` 不要用于「只改标题」这类返工**：它会重生主图、清掉 ⑨b 核验章、并留下旧主图。返工一律用 `操作-阿奇索单阶段重入调用.md` 里的单阶段调用。
@@ -137,3 +139,65 @@ python C:/Users/Administrator/.workbuddy/tools/adb/check_doc_code.py  # 文档�
 - **主图逐字核验需要视觉能力**：`preflight_env.py` 明确声明不能代替。agent 看不了图时，主图这关只能标「待人工核验」，**不得声称已核验**。
 - **并发无锁**：多个 agent 同时跑会互相覆盖 spec 与线上商品。动手前确认没有别的会话在跑。
 - **`--dry` 只写 `spec_preview_<pno>.json`**，不覆盖生产 spec；这是 2026-11-15 修过的坑，别再改回去。
+
+---
+
+## 8. 已固化的提速命令 `fastlane.py`（2026-11-17）
+
+> 这些步骤以前每次手工做，已确认「机械、可枚举、不需要判断」，所以固化。**先看这里，别再手工重做一遍。**
+
+```bash
+python fastlane.py add    --brand "UC网盘超级会员" --tier 1天 --label 手机号      # 一句话上品（默认预演）
+python fastlane.py check  --gid <GID> [--gid <GID2>] [--fix]                    # 验收 + 自动返工
+python fastlane.py new    --pno <PNO> --title "..." [--go]                      # 新建宝贝（默认预演）
+python fastlane.py prep   --gid <GID> --pno <PNO> --name "..." --label 手机号     # 单件出图（2 秒）
+python fastlane.py ship   --gid <GID> --png out_layered/<GID>_final.png          # 上传+清旧图+登记
+python fastlane.py batch-prep --jobs jobs.json                                   # 多件并行出图
+python fastlane.py batch-ship --jobs jobs.json                                   # 多件串行上线+统一验收
+python fastlane.py title  "标题文本"                                             # 标题字节预算（≤90）
+python fastlane.py attach --gid <GID>                                            # 混源参数 key 修复
+```
+
+**`check --fix` 只自动修机械项**：① 商品在线、⑪ 擦亮/售完上架、⑤ 直充 attach、清单外的残留旧图。
+**不会替你动**：主图对不对（要看图）、描述写什么、SKU 改名（会重排 skuId）、换不换货源。
+
+**主图出图走本地分层合成**（`compose_main_image.py` + `_fastlane_bg.py`，需 Pillow，`fastlane.py` 自动切 DSH 解释器）。生图 API `gpt-image-2.6` / `nano-banana-2-1k` 2026-11-17 起持续 503（分组无可用通道），**不要再试生图 API**，直接用本地合成。
+
+---
+
+## 8b. 批量建品 `batch_new.py`（2026-11-18）
+
+> 一次环境检查 → 逐件一条龙 → 统一巡检。多件新建时用它，**别逐件手敲 `create_from_pno.py --go`**（每件都会重跑 preflight，且巡检不汇总）。
+
+```bash
+python batch_new.py 95425:15232:埋堆堆 95425:15234:埋堆堆    # 命令行：acct:pno:keyword
+python batch_new.py --file items.txt                          # 配置文件（每行 acct:pno:keyword）
+python batch_new.py 95425:15232:埋堆堆 --dry --skip-env       # 只预演
+python batch_new.py --file items.txt --template-gid <13位ID> --account-label 手机号 --recharge-types 1
+```
+
+- **不并行**：并行会撞阿奇索 API 限流 + 草稿箱/标题竞争，**串行优先**。
+- 每件独立 try/except：一件失败不影响后续，末尾统一巡检并汇总成败。
+- 单件要单独覆盖 title/desc → 用配置文件行内 JSON。
+- ⚠️ 主图档位跨单位时，`create_from_pno` 已自动切 `main_image_sku_mode=all`（2026-11-18 根治），不会再像 11-18 那样被预检拦停。
+
+---
+
+## 9. 🔴 重复三次 → 主动提议做成命令（2026-11-17 用户定）
+
+> 用户原话：「**以后重复多次用的项目，记得提醒我做成命令提高速度**」
+
+**这是 agent 的主动义务，不是等用户提。**
+
+| 第几次做同一套操作 | 动作 |
+|---|---|
+| 第 2 次 | 记下来，不急着写代码（可能只是一次性需求） |
+| **第 3 次** | **停下当前工作，主动提议**：「这套已经做了 3 次，要不要固化成命令？」 |
+| 用户同意 | 当天实现 + 登记知识库 + 跑验证，不留半成品 |
+
+- **提议必须带量化**：现在每次 X 分钟 → 固化后 Y 秒，否则用户无法判断值不值。
+- **只固化机械步骤**：判断、核验、比价决策不固化，避免把错误自动化。
+- **固化后必须登记**：写进本文件 §8 + `操作-*.md`，否则其他 agent 下次还是手工。
+- 判据一句话：**这件事我下次还会再做一遍吗？会 → 就该是一条命令。**
+
+正文见 [[操作层规范]] §八。

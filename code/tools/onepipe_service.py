@@ -110,8 +110,9 @@ def _build_onepipe_argv(body: dict):
         if key not in body or body[key] in (None, ""):
             continue
         val = _safe_value(body[key])
-        if key == "main_image_sku_mode" and val not in ("highest", "all"):
-            raise ValueError("main_image_sku_mode 只能是 highest 或 all")
+        if key == "main_image_sku_mode" and not (
+                val in ("highest", "all", "highest_month") or val.startswith("specific:")):
+            raise ValueError("main_image_sku_mode 只能是 highest / all / highest_month / specific:<标签,标签>")
         argv += [flag, val]
     for key, flag in BOOL_OPTIONS.items():
         if body.get(key) is True:

@@ -425,7 +425,7 @@ def clean_product_name(title):
     return t.strip() or str(title)[:20]
 
 
-SKU_DISPLAY_MODES = ("highest", "all", "highest_month")
+SKU_DISPLAY_MODES = ("highest", "all", "highest_month", "specific")
 
 
 class SkuDisplayError(RuntimeError):
@@ -510,9 +510,8 @@ def select_sku_display(item_skus, mode="highest"):
     返回 labels、实际展示 SKU 和证据。highest 遇到无法唯一比较的结果直接失败；
     all 只在调用方显式选择时使用，并携带提醒证据，防止默认悄悄铺全档。
     """
-    mode = str(mode or "highest").strip().lower()
-    if mode not in SKU_DISPLAY_MODES:
-        raise SkuDisplayError("主图 SKU 展示模式必须是 highest 或 all，实际为 %r" % mode)
+    raw_mode = str(mode or "highest").strip()
+    mode = raw_mode.lower()
     rows = []
     for index, sku in enumerate(item_skus or []):
         labels = _sku_labels(sku)
@@ -520,6 +519,26 @@ def select_sku_display(item_skus, mode="highest"):
             rows.append({"index": index, "sku_id": sku.get("skuId"), "labels": labels})
     if not rows:
         raise SkuDisplayError("目标商品没有可用于主图的自身 SKU 档位")
+    # 🔴 specific:<标签,标签> —— 用户明确指定展示某一条 SKU（如「specific:SVIP,3天」），
+    #    按标签匹配唯一 SKU；highest 对双维度同档（VIP 3天/SVIP 3天并列）会拒绝，故提供此模式。
+    if mode.startswith("specific:"):
+        target_labels = [x.strip() for x in raw_mode.split(":", 1)[1].split(",") if x.strip()]
+        if not target_labels:
+            raise SkuDisplayError("specific 模式缺目标标签")
+        matches = [row for row in rows if set(target_labels) <= set(row["labels"])]
+        if len(matches) != 1:
+            raise SkuDisplayError("specific 模式匹配 %d 个 SKU（目标 %s），拒绝" % (
+                len(matches), "/".join(target_labels)))
+        best = matches[0]
+        return {
+            "mode": "specific",
+            "labels": best["labels"],
+            "displayed_skus": [best],
+            "selection_evidence": "按用户明确选择仅展示指定 SKU：%s" % "/".join(best["labels"]),
+            "reminder": "",
+        }
+    if mode not in SKU_DISPLAY_MODES:
+        raise SkuDisplayError("主图 SKU 展示模式必须是 highest 或 all，实际为 %r" % mode)
     if mode == "all":
         labels = []
         for row in rows:
@@ -631,6 +650,8 @@ def build_prompt(product_name, sku_labels, account_label="", brand_hint="", sku_
         sku_display_line = "- 原图单档大字区 → 改为档位胶囊：%s。仅展示按目标商品自身时长/面额判定的最高档位，不展示其他档位" % sku_text
     elif sku_display_mode == "highest_month":
         sku_display_line = "- 原图单档大字区 → 改为档位胶囊：%s。仅展示用户明确选择的月档最高值，不展示天档，不进行跨单位换算" % sku_text
+    elif sku_display_mode == "specific":
+        sku_display_line = "- 原图单档大字区 → 改为档位胶囊：%s。仅展示用户明确选择的指定 SKU 档位，不展示其他档位" % sku_text
     else:
         sku_display_line = "- 原图单档大字区 → 改为档位胶囊：%s。已显式选择展示目标商品全部 SKU 档位，不得漏档" % sku_text
     whitelist = [product_name] + (["下单填写%s" % account_label] if account_label else []) \
