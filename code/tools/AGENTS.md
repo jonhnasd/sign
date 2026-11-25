@@ -161,7 +161,9 @@ python fastlane.py attach --gid <GID>                                           
 **`check --fix` 只自动修机械项**：① 商品在线、⑪ 擦亮/售完上架、⑤ 直充 attach、清单外的残留旧图。
 **不会替你动**：主图对不对（要看图）、描述写什么、SKU 改名（会重排 skuId）、换不换货源。
 
-**主图出图走本地分层合成**（`compose_main_image.py` + `_fastlane_bg.py`，需 Pillow，`fastlane.py` 自动切 DSH 解释器）。生图 API `gpt-image-2.6` / `nano-banana-2-1k` 2026-11-17 起持续 503（分组无可用通道），**不要再试生图 API**，直接用本地合成。
+**主图出图口径只认正文 [[身份与记忆/上品规则]]**（2026-11-19 已作废「本地合成当交付退路」）：必须用快跑大模型，首选 `gpt-image-2.6-flare`；`compose_main_image.py` / `_fastlane_bg.py` 只作草稿预演，**不得当成品交付**。遇 503 先 `list_kuaipao_models()` 换可用模型重试，仍失败停下报告用户。
+
+**易店侧复刻式主图（2026-11-25 实测）**：快跑直连 `gpt-image-2.6-flare` 可用，已出 2 张终版图 → [[项目-易店共享号与链接直充文案库]] §九。入口 `gen_replica_main_img.py`（必须带参考图，不回退纯文生图）；七段骨架白名单冲突用一次性补丁 `_gen_out/_patch_prompt.py` 追加「最终裁决」段覆盖。
 
 ---
 
